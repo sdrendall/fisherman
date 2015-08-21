@@ -1,5 +1,5 @@
 # The train/test net protocol buffer definition
-net: "fish_net_train_test.prototxt"
+net: "/home/sam/code/fisherman/caffe/fish_net_train_test.prototxt"
 
 # The base learning rate, momentum and the weight decay of the network.
 base_lr: 0.01
@@ -19,11 +19,11 @@ max_iter: 10000
 
 # Test every 500 iterations
 test_interval: 500
-test_iter: 30
+test_iter: 100
 
 # snapshot intermediate results
 snapshot: 5000
-snapshot_prefix: "fish_net_cfos_only"
+snapshot_prefix: "fish_net_output"
 
 # solver mode: CPU or GPU
 solver_mode: GPU

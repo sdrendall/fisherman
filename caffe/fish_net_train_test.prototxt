@@ -15,8 +15,9 @@ layer {
   }
 
   data_param {
-    source: "/home/sam/code/fisherman/data/cfos_only_dbs/training_db"
-    batch_size: 256
+    source: "/home/sam/code/fisherman/data/median_normalized/training_db"
+    #source: "/home/sam/Desktop/Counting_training_Last/training_db"
+    batch_size: 512
     backend: LMDB
   }
 }
@@ -34,13 +35,14 @@ layer {
   }
 
   data_param {
-    source: "/home/sam/code/fisherman/data/cfos_only_dbs/test_db"
-    batch_size: 128
+    source: "/home/sam/code/fisherman/data/median_normalized/test_db"
+    #source: "/home/sam/Desktop/Counting_training_Last/test_db"
+    batch_size: 256
     backend: LMDB
   }
 }
 
-# Input is 50 x 50
+# Input is 49 x 49
 
 layer {
   name: "conv1"
@@ -58,7 +60,7 @@ layer {
 
   convolution_param {
     num_output: 20
-    kernel_size: 9
+    kernel_size: 8
     stride: 1
     weight_filler {
       type: "xavier"

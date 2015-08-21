@@ -1,11 +1,11 @@
 name: "fish_net"
 input: "data"
-input_dim: 10
 input_dim: 1
-input_dim: 50
-input_dim: 50
+input_dim: 1
+input_dim: 49
+input_dim: 49
 
-# Input is 50 x 50 (x 2)
+# Input is 49 x 49 (x 1)
 
 layer {
   name: "conv1"
@@ -23,7 +23,7 @@ layer {
 
   convolution_param {
     num_output: 20
-    kernel_size: 9
+    kernel_size: 8
     stride: 1
     weight_filler {
       type: "xavier"
