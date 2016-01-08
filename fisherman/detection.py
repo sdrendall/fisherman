@@ -28,6 +28,10 @@ class ImageChunker(object):
         self._image_resolution = numpy.asarray(image.shape[1:], dtype=numpy.float32)
         self._chunk_size = numpy.asarray(self._image_resolution.min(), dtype=numpy.float32)
 
+        # The ImageChunker tracks the current chunk row and column as it iterates. 
+        self.current_chunk_row = 0
+        self.current_chunk_col = 0
+        
         if chunk_size is not None:
             self.set_chunk_size(chunk_size)
 
@@ -41,6 +45,8 @@ class ImageChunker(object):
          This should result in coherent chunks of memory
         """
         for row, col in self._get_chunk_range():
+            self.current_chunk_col = col
+            self.current_chunk_row = row
             yield self._get_image_chunk(row, col)
 
     def _get_chunk_range(self):
