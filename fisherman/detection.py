@@ -98,7 +98,7 @@ class ImageChunker(object):
         The chunk_size must be smaller than the height and width of the input image
         """
         chunk_size = numpy.asarray(chunk_size, dtype=numpy.float32)
-        if not all(self._image_resolution > chunk_size):
+        if not all(self._image_resolution >= chunk_size):
             msg = "Chunk size must be less than or equal to the image height and width\n" \
                 "Image Height: %r, Image Width: %r" % tuple(self._image_resolution)
             raise error_handling.ConfigurationException(msg)
