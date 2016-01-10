@@ -650,19 +650,19 @@ class ImageSlice(object):
         """
         return self._image
 
-    def set_bounding_box(self, top_left):
+    def set_bounding_box(self, bbox):
         """
-        Specifies the top, left corner of self.image in the containing image, such that 
-         the elementwise addition of self._top_left and a (row, column) index in self._image
-         results in the corresponding index of the original image
+        Specifies the bounding box of self.image in the containing image in the following format:
+
+        [top_left_row, top_left_col, bottom_right_row, bottom_right_col]
 
         Index is stored internally as a float32 and non-integer values are rounded
         """
-        self._bbox = numpy.asarray(top_left, dtype=numpy.float32).round()
+        self._bbox = numpy.asarray(bbox, dtype=numpy.float32).round()
 
     def get_bounding_box(self):
         """
-        Returns the top left index as a tuple
+        Returns the bounding box as a tuple
         """
         return tuple(self._bbox)
 
@@ -699,6 +699,8 @@ class Cell(ImageSlice):
     def set_centroid(self, centroid):
         """
         Sets the given centroid as a numpy.float32
+
+        This should be in the format (row, col)
         """
         self._centroid = numpy.asarray(centroid, dtype=numpy.float32)
 
