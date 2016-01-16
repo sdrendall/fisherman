@@ -29,8 +29,7 @@ class ImageChunker(object):
         self._chunk_size = numpy.asarray(self._image_resolution.min(), dtype=numpy.float32)
 
         # The ImageChunker tracks the current chunk row and column as it iterates. 
-        self.current_chunk_row = 0
-        self.current_chunk_col = 0
+        self.current_chunk_bounds = None
         
         if chunk_size is not None:
             self.set_chunk_size(chunk_size)
@@ -45,8 +44,6 @@ class ImageChunker(object):
          This should result in coherent chunks of memory
         """
         for row, col in self._get_chunk_range():
-            self.current_chunk_col = col
-            self.current_chunk_row = row
             yield self._get_image_chunk(row, col)
 
     def _get_chunk_range(self):
@@ -88,6 +85,7 @@ class ImageChunker(object):
 
         start_row, end_row = row_range
         start_col, end_col = col_range
+        self.set_current_chunk_bounds(start_row, start_col, end_row, end_col)
 
         return self._image[:, start_row:end_row, start_col:end_col]
 
@@ -105,6 +103,9 @@ class ImageChunker(object):
 
         self._chunk_size = chunk_size
 
+    def set_current_chunk_bounds(self, start_row, start_col, end_row, end_col):
+        self.current_chunk_bounds = (start_row, start_col, end_row, end_col)
+
     def get_chunk_size(self):
         """
         Returns the chunk_size as an int
@@ -116,7 +117,6 @@ class ImageChunker(object):
         Returns the shape of an input chunk as a tuple
         """
         return self._image.shape[0], self.get_chunk_size(), self.get_chunk_size()
-
 
 class ImageChunkerWithOutput(ImageChunker):
 
@@ -202,6 +202,8 @@ class ImageChunkerWithOutput(ImageChunker):
             overflow = end_col - self._image.shape[2]
             start_col -= overflow
             end_col -= overflow
+
+        self.set_current_chunk_bounds(start_row, start_col, end_row, end_col)
 
         return self._image[:, start_row:end_row, start_col:end_col]
 
