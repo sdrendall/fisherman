@@ -19,6 +19,7 @@ def main():
     from sys import argv
     if len(argv) < 2:
         print "Proper Usage: %s [path/to/db]" % argv[0]
+        return
 
     env = lmdb.open(argv[1], readonly=True)
 

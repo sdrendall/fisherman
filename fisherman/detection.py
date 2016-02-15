@@ -118,6 +118,7 @@ class ImageChunker(object):
         """
         return self._image.shape[0], self.get_chunk_size(), self.get_chunk_size()
 
+
 class ImageChunkerWithOutput(ImageChunker):
 
     def __init__(self, image,
