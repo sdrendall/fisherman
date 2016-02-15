@@ -274,8 +274,11 @@ class LabelImporter(object):
         """
         marker_sets = root.find('Marker_Data').findall('Marker_Type')
         # The first marker type always contains positive examples, and the second contains negative examples
-        label_list = [(self._extract_centroid_from_marker_element(marker), 1) for marker in marker_sets[0].findall('Marker')] + \
-                        [(self._extract_centroid_from_marker_element(marker), 0) for marker in marker_sets[1].findall('Marker')]
+        label_list = [(self._extract_centroid_from_marker_element(marker), 1) for marker in marker_sets[0].findall('Marker')]
+
+        # Some images have no negative examples
+        if len(marker_sets) > 1:
+            label_list += [(self._extract_centroid_from_marker_element(marker), 0) for marker in marker_sets[1].findall('Marker')]
 
         return label_list
     
