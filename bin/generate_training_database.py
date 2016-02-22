@@ -82,6 +82,7 @@ def main():
     xml_file_paths = map(path.expanduser, argv[1:-3])
 
     # Add each training set to the training db
+    db1_count = db2_count = 0
     for xml_path in xml_file_paths:
         print xml_path
         root = ET.parse(xml_path)
@@ -102,23 +103,24 @@ def main():
 
         # Load Image
         image_importer = data_io.SourceImageImporter(image_path)
-        image_importer.set_channels_of_interest((1,))
+        image_importer.set_channels_of_interest((0,))
         #image_importer.set_transpose(1, 2, 0)
-        image = image_importer.import_image().astype(numpy.float32)
+        image = image_importer.import_image()
         #image = median_normalize(image) * 25
         #image = (img_as_float(image) * 255).astype(numpy.uint8)
 
-        overflow = (image[..., 0] > 255).sum().astype(numpy.float32)/image[..., 0].size
+        #overflow = (image[..., 0] > 255).sum().astype(numpy.float32)/image[..., 0].size
+        print image.dtype
 
         print '----------------------------------'
         print "Max: ", image[..., 0].max()
         print "Min: ", image[..., 0].min()
-        print "Overflow: ", overflow
+        #print "Overflow: ", overflow
         print '----------------------------------\n'
 
         # Create TrainingSet
         tag_generator = name_tag_generator(path.basename(xml_path))
-        training_set = data_io.TrainingSet(image.astype(numpy.uint8), labels, example_shape=(49,49))
+        training_set = data_io.TrainingSet(image.astype(numpy.float64), labels, example_shape=(49,49))
         training_set.set_tag_generator(tag_generator)
 
         #amplifier = configure_training_set_amplifier()
@@ -129,11 +131,16 @@ def main():
         for example in training_set:
             if random.random() < split_ratio:
                 to_db1.append(example)
+                db1_count += 1
             else:
                 to_db2.append(example)
+                db2_count += 1
 
         db1_factory.add_training_set(to_db1)
         db2_factory.add_training_set(to_db2)
+
+    print "Db1 Count: ", db1_count
+    print "Db2 Count: ", db2_count
 
 if __name__ == "__main__":
     main()

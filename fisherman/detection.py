@@ -399,7 +399,8 @@ class CellDetector(object):
         elif len(image.shape) != 3:
             raise TypeError('Image shape must be of length 2 or 3!')
 
-        self.image = skimage.img_as_float(image).astype(numpy.float32)
+        self.image = image.astype(numpy.float64)
+        #self.image = skimage.img_as_float(image).astype(numpy.float32)
         self.clear_cached_variables()
         self._set_signal_plane()
 
@@ -437,7 +438,8 @@ class CellDetector(object):
         """
         Updates the signal channel with the current image and signal channel
         """
-        self._signal_plane = (math.median_normalize(self.image[..., self.signal_channel], dtype=numpy.float32) * 25)
+        #self._signal_plane = (math.median_normalize(self.image[..., self.signal_channel], dtype=numpy.float32) * 25)
+        self._signal_plane = self.image[..., self.signal_channel].astype(numpy.float64) * 0.0001526
 
     def set_mode_cpu(self):
         """
@@ -614,8 +616,11 @@ class CellDetector(object):
         To recompute the result, specify the refresh_cache option
         The cache can be cleared by setting self._mean_image to None
         """
+        # For some god awful reason the mean filter doesn't accept float inputs with values outside of the range of -1 to 1
+        # Normalizing the signal_plane before using it as an input is my workaround to this annoying issue
         if self._mean_image is None or refresh_cache:
-            self._mean_image = filters.rank.mean(self._signal_plane.astype(numpy.uint8), disk(self._cell_radius))
+            self._mean_image = filters.rank.mean(self._signal_plane/self._signal_plane.max(), disk(self._cell_radius))
+            self._mean_image *= self._signal_plane.max()
 
         return self._mean_image
 

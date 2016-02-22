@@ -11,13 +11,13 @@ layer {
   }
 
   transform_param {
-    scale: 0.00392156862
+    scale: 0.0001526
+    #mean_value: 129.23
   }
 
   data_param {
-    source: "/home/sam/code/fisherman/data/median_normalized/training_db"
-    #source: "/home/sam/Desktop/Counting_training_Last/training_db"
-    batch_size: 512
+    source: "/home/sam/code/fisherman/data/original_only/original_only_training_db"
+    batch_size: 256
     backend: LMDB
   }
 }
@@ -31,12 +31,13 @@ layer {
     phase: TEST
   }
   transform_param {
-    scale: 0.00392156862
+    scale: 0.0001526
+    #scale: 0.01384533
+    #mean_value: 129.23
   }
 
   data_param {
-    source: "/home/sam/code/fisherman/data/median_normalized/test_db"
-    #source: "/home/sam/Desktop/Counting_training_Last/test_db"
+    source: "/home/sam/code/fisherman/data/original_only/original_only_testing_db"
     batch_size: 256
     backend: LMDB
   }

@@ -45,18 +45,20 @@ class TrainingExample(object):
 
     def to_datum(self):
         # Format the training example as a caffe datum
-        datum = caffe.proto.caffe_pb2.Datum()
-        datum.height = self.image.shape[0]
-        datum.width = self.image.shape[1]
-        datum.channels = self.image.shape[2]
-        datum.label = int(self.label)
+        #datum = caffe.proto.caffe_pb2.Datum()
+        #datum.height = self.image.shape[0]
+        #datum.width = self.image.shape[1]
+        #datum.channels = self.image.shape[2]
+        #datum.label = int(self.label)
 
         # Caffe expects data in the shape (Channels, Height, Width)
         #  Skimage loads the images in the form (Height, Width, Channels)
         #  The axes must be rearranged before the data is dumped to the db
-        datum.data = self.image.transpose(2,0,1).tostring()
+        #datum.data = self.image.transpose(2,0,1).tostring()
 
-        return datum
+        # The built in caffe method properly handles different data types
+
+        return caffe.io.array_to_datum(self.image.transpose(2,0,1), label=int(self.label))
 
 
     def display(self):
@@ -350,6 +352,17 @@ class LMDatabaseFactory(CaffeDataFactory):
 
 class H5Factory(CaffeDataFactory):
     pass
+
+
+def convert_raw_datum_to_training_example(raw_datum):
+    datum = caffe.proto.caffe_pb2.Datum()
+    datum.ParseFromString(raw_datum)
+
+    flattened_image = numpy.fromstring(datum.data, dtype=numpy.uint8)
+    image = flattened_image.reshape(datum.channels, datum.height, datum.width).swapaxes(0,2).swapaxes(1,2)
+    label = datum.label 
+
+    return TrainingExample(image, label)
 
 
 def get_datum_stats(db):
