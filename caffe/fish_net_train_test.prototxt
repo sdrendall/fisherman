@@ -11,12 +11,12 @@ layer {
   }
 
   transform_param {
-    scale: 0.0001526
-    #mean_value: 129.23
+    scale: 0.000185634
+    #mean_value: 617.04
   }
 
   data_param {
-    source: "/home/sam/code/fisherman/data/original_only/original_only_training_db"
+    source: "/home/sam/code/fisherman/data/original_and_qc/original_and_qc_training_db"
     batch_size: 256
     backend: LMDB
   }
@@ -31,13 +31,12 @@ layer {
     phase: TEST
   }
   transform_param {
-    scale: 0.0001526
-    #scale: 0.01384533
-    #mean_value: 129.23
+    scale: 0.000185634
+    #mean_value: 617.04
   }
 
   data_param {
-    source: "/home/sam/code/fisherman/data/original_only/original_only_testing_db"
+    source: "/home/sam/code/fisherman/data/original_and_qc/original_and_qc_testing_db"
     batch_size: 256
     backend: LMDB
   }

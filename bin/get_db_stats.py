@@ -17,12 +17,13 @@ def main():
     db = lmdb.open(db_path, readonly=True)
 
     moments = []
+    positive_count = 0.0
     with db.begin() as txn:
         for _, datum_str in txn.cursor():
             datum = caffe.proto.caffe_pb2.Datum()
             datum.ParseFromString(datum_str)
             example_image = caffe.io.datum_to_array(datum)
-            examples = (caffe.io.datum_to_array(datum) for _, datum in txn.cursor())
+            positive_count += datum.label
             moments.append((
                 example_image.astype(numpy.float64).mean(),
                 example_image.astype(numpy.float64).var() + example_image.astype(numpy.float64).mean()**2
@@ -41,6 +42,8 @@ def main():
     print "Scale: ", scale
     print "16 bit scale", scale/2**16
     print "8 bit scale", scale/2**8
-    print "Count: ", len(first)
+    print "Positive Samples: ", positive_count, positive_count/len(first)
+    print "Negative Samples: ", len(first) - positive_count, (len(first) - positive_count)/len(first)
+    print "Total Samples: ", len(first)
 
 main()
