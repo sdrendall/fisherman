@@ -103,7 +103,7 @@ def main():
 
         # Load Image
         image_importer = data_io.SourceImageImporter(image_path)
-        image_importer.set_channels_of_interest((0,))
+        image_importer.set_channels_of_interest((1,))
         #image_importer.set_transpose(1, 2, 0)
         image = image_importer.import_image()
         #image = median_normalize(image) * 25

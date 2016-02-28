@@ -79,9 +79,10 @@ def main():
     io.imsave('mask_out.png', mask)
     
     labels = detector.separate_cell_mask(mask)
-    print len(numpy.unique(labels))
+    print 'Detected %d cells!' % len(numpy.unique(labels))
 
-    io.imsave('labels_out.png', color.label2rgb(labels[..., 0], image=normalize(image.astype(numpy.float64)), bg_label=0))
+    display_image = normalize(numpy.log(numpy.finfo(numpy.float64).eps + image.astype(numpy.float64)))
+    io.imsave('labels_out.png', color.label2rgb(labels[..., 0], image=display_image, bg_label=0))
 
     return
 
