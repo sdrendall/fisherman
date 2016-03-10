@@ -16,7 +16,7 @@ layer {
   }
 
   data_param {
-    source: "/home/sam/code/fisherman/data/extended_original/extended_original_training_db"
+    source: "/home/sam/code/fisherman/data/original_and_partial_qc/original_and_partial_qc_training_db"
     batch_size: 256
     backend: LMDB
   }
@@ -36,7 +36,7 @@ layer {
   }
 
   data_param {
-    source: "/home/sam/code/fisherman/data/extended_original/extended_original_testing_db"
+    source: "/home/sam/code/fisherman/data/original_and_partial_qc/original_and_partial_qc_testing_db"
     batch_size: 256
     backend: LMDB
   }

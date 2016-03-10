@@ -439,7 +439,7 @@ class CellDetector(object):
         Updates the signal channel with the current image and signal channel
         """
         #self._signal_plane = (math.median_normalize(self.image[..., self.signal_channel], dtype=numpy.float32) * 25)
-        self._signal_plane = self.image[..., self.signal_channel].astype(numpy.float64) * 0.0001526
+        self._signal_plane = self.image[..., self.signal_channel].astype(numpy.float64) * 0.000185634
 
     def set_mode_cpu(self):
         """
@@ -533,8 +533,9 @@ class CellDetector(object):
         """
         print "Cleaning mask ....."
         mask = binary_fill_holes(mask)
-        mask = morphology.erosion(mask, disk(2))
-        return morphology.dilation(mask, disk(3))
+        morphology.remove_small_objects(mask, min_size=3, in_place=True)
+        #mask = morphology.erosion(mask, disk(2))
+        return mask #morphology.dilation(mask, disk(3))
 
     def scale_mask_to_image(self, mask):
         """
@@ -561,11 +562,18 @@ class CellDetector(object):
         start_points = self.get_peak_local_max(indices=False)
         start_points = measure.label(start_points, return_num=False)
 
-        # The background is a single region, that watersheds against the cells
-        start_points[numpy.logical_not(mask)] = start_points.max() + 1 
+        # The background is a single region that watersheds against the cells
+        # background = numpy.logical_not(mask) # The old method for determining the background
+        background = morphology.dilation(self.get_peak_local_max(indices=False), disk(self._cell_radius*3)) # The background is initialized as the regions that are not near any starting points
+        background = numpy.logical_not(background)
+        start_points[background] = start_points.max() + 1 
 
         ws_im = morphology.watershed(gauss_laplace_image, start_points[..., numpy.newaxis])
         ws_im[ws_im == ws_im.max()] = 0 # Background should be set to zero
+
+        # Remove very small remaining cells
+        morphology.remove_small_objects(ws_im, 45, in_place=True)
+
         return ws_im
 
     def get_cells_from_labels(self, label_mask):
@@ -619,7 +627,7 @@ class CellDetector(object):
         # For some god awful reason the mean filter doesn't accept float inputs with values outside of the range of -1 to 1
         # Normalizing the signal_plane before using it as an input is my workaround to this annoying issue
         if self._mean_image is None or refresh_cache:
-            self._mean_image = filters.rank.mean(self._signal_plane/self._signal_plane.max(), disk(self._cell_radius))
+            self._mean_image = filters.rank.mean(self._signal_plane/self._signal_plane.max(), disk(self._cell_radius)).astype(numpy.float64)
             self._mean_image *= self._signal_plane.max()
 
         return self._mean_image

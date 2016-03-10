@@ -58,7 +58,7 @@ def main():
         net=fish_net,
         chunker_params=chunker_params,
         signal_channel=0,
-        cell_radius=12
+        cell_radius=7
     )
 
     detector.set_mode_gpu()
@@ -75,13 +75,18 @@ def main():
 
     detector.set_image(image)
 
+    raw_mask = detector.get_fish_net_mask(cleaned=False, scaled=False).astype(numpy.float64)
+    io.imsave('raw_mask_out.png', raw_mask)
+
     mask = detector.get_fish_net_mask(cleaned=True, scaled=True)
     io.imsave('mask_out.png', mask)
     
     labels = detector.separate_cell_mask(mask)
     print 'Detected %d cells!' % len(numpy.unique(labels))
 
-    display_image = normalize(numpy.log(numpy.finfo(numpy.float64).eps + image.astype(numpy.float64)))
+    display_image = image.astype(numpy.float64) - image.min()
+    display_image *= 1/(numpy.percentile(display_image, 99.5))
+    display_image[display_image > 1] = 1
     io.imsave('labels_out.png', color.label2rgb(labels[..., 0], image=display_image, bg_label=0))
 
     return
