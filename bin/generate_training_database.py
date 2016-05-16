@@ -3,6 +3,7 @@ __author__ = 'sdrendall'
 import numpy
 import random
 import fnmatch
+import json
 from fisherman import data_io, math
 from fisherman import amplification as amp
 from fisherman import generators as gen
@@ -43,7 +44,6 @@ def translate_label(label, trans):
 
 
 def search_for_matching_image(start_path, image_name):
-    image_name = image_name.split(' ')[-1]
     for dirpath, dirnames, filenames in walk(start_path):
         matching_names = fnmatch.filter(filenames, image_name)
         if len(matching_names) == 1:
@@ -56,22 +56,36 @@ def search_for_matching_image(start_path, image_name):
     print "No matching name found for %s" % image_name
     return None
 
+
 def name_tag_generator(basename):
     counter = gen.counter()
     for number in counter:
         yield '%s_%d' % (basename, number)
 
+
+def get_histogram_matching_vsi_filename(vsi_filename, vsi_histograms):
+    for entry in vsi_histograms.itervalues():
+        if vsi_filename in entry['vsi_filename']:
+            return entry
+
+    print "Could not find histogram for %s" % vsi_filename
+    return None
+
+
 def main():
     if len(argv) < 5:
         print "Insufficient Arguments!"
-        print argv[0] + " [xml_files] [db1] [db2] [db1_size/(db1_size + db2_size)]"
+        print argv[0] + " [xml_files] [histogram_json] [db1] [db2] [db1_size/(db1_size + db2_size)]"
         return
     
     # Create DBs
     
     mapsize = 20*(2**32 - 1)
+    histogram_path = path.expanduser(argv[-4])
     db1_path = path.expanduser(argv[-3])
     db2_path = path.expanduser(argv[-2])
+
+    vsi_histograms = json.load(open(histogram_path))
     
     split_ratio = float(argv[-1])
 
@@ -79,7 +93,7 @@ def main():
     db2_factory = data_io.LMDatabaseFactory(db2_path, mapsize)
 
     #xml_file_paths = glob(path.expanduser(argv[1]))
-    xml_file_paths = map(path.expanduser, argv[1:-3])
+    xml_file_paths = map(path.expanduser, argv[1:-4])
 
     # Add each training set to the training db
     db1_count = db2_count = 0
@@ -89,41 +103,46 @@ def main():
         xml_dir = path.dirname(xml_path)
         image_basename = root.find('Image_Properties').find('Image_Filename').text
         image_filename = search_for_matching_image(xml_dir, path.basename(image_basename))
-        #image_path = path.join(xml_dir, image_filename)
+        vsi_filename = '_'.join(image_basename.split('_')[:4]) + '.vsi'
 
         if image_filename is None:
+            print "Could not locate %s" % image_basename
             continue
         else:
             image_path = image_filename
 
         # Load Labels
         label_importer = data_io.LabelImporter(xml_path)
-        #label_amplifier = configure_label_amplifier()
         labels = label_importer.import_data()
 
         # Load Image
         image_importer = data_io.SourceImageImporter(image_path)
-        image_importer.set_channels_of_interest((1,))
-        #image_importer.set_transpose(1, 2, 0)
+        image_importer.set_channels_of_interest((0,))
         image = image_importer.import_image()
-        #image = median_normalize(image) * 25
-        #image = (img_as_float(image) * 255).astype(numpy.uint8)
 
-        #overflow = (image[..., 0] > 255).sum().astype(numpy.float32)/image[..., 0].size
-        print image.dtype
 
         print '----------------------------------'
+        print image.dtype
         print "Max: ", image[..., 0].max()
         print "Min: ", image[..., 0].min()
-        #print "Overflow: ", overflow
+
+        
+        matching_histogram = get_histogram_matching_vsi_filename(vsi_filename, vsi_histograms)
+        if matching_histogram is not None:
+            median = matching_histogram['percentile_values'][50]
+            normalized_image = image.astype(numpy.float64)/median
+        else:
+            normalized_image = median_normalize(image.astype(numpy.float64))
+
+        print "normalized"
+        print "Max: ", normalized_image[..., 0].max()
+        print "Min: ", normalized_image[..., 0].min()
         print '----------------------------------\n'
 
         # Create TrainingSet
         tag_generator = name_tag_generator(path.basename(xml_path))
-        training_set = data_io.TrainingSet(image.astype(numpy.float64), labels, example_shape=(49,49))
+        training_set = data_io.TrainingSet(normalized_image, labels, example_shape=(49,49))
         training_set.set_tag_generator(tag_generator)
-
-        #amplifier = configure_training_set_amplifier()
 
         # Add TrainingSet to the database
         to_db1 = list()

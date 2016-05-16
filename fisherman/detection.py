@@ -438,8 +438,8 @@ class CellDetector(object):
         """
         Updates the signal channel with the current image and signal channel
         """
-        #self._signal_plane = (math.median_normalize(self.image[..., self.signal_channel], dtype=numpy.float32) * 25)
-        self._signal_plane = self.image[..., self.signal_channel].astype(numpy.float64) * 0.000185634
+        self._signal_plane = (math.median_normalize(self.image[..., self.signal_channel], dtype=numpy.float64))
+        #self._signal_plane = self.image[..., self.signal_channel].astype(numpy.float64) * 0.000185634
 
     def set_mode_cpu(self):
         """
@@ -533,9 +533,9 @@ class CellDetector(object):
         """
         print "Cleaning mask ....."
         mask = binary_fill_holes(mask)
-        morphology.remove_small_objects(mask, min_size=3, in_place=True)
-        #mask = morphology.erosion(mask, disk(2))
-        return mask #morphology.dilation(mask, disk(3))
+        #mask = morphology.remove_small_objects(mask, min_size=3, in_place=True)
+        mask = morphology.erosion(mask, disk(2))
+        return morphology.dilation(mask, disk(3))
 
     def scale_mask_to_image(self, mask):
         """
@@ -572,7 +572,7 @@ class CellDetector(object):
         ws_im[ws_im == ws_im.max()] = 0 # Background should be set to zero
 
         # Remove very small remaining cells
-        morphology.remove_small_objects(ws_im, 45, in_place=True)
+        ws_im = morphology.remove_small_objects(ws_im, 45, in_place=True)
 
         return ws_im
 
