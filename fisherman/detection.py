@@ -235,7 +235,7 @@ class ImageChunkerWithOutput(ImageChunker):
 
         return self._output[:, start_row:end_row, start_col:end_col]
 
-    def allocate_output(self):
+    def allocate_output(self, dtype=numpy.float64):
         """
         Allocates a numpy array to hold the output of the CNN resulting from the input array
         The output shape is:
@@ -247,7 +247,7 @@ class ImageChunkerWithOutput(ImageChunker):
 
         output_resolution = numpy.ceil((self._image_resolution - self._window_size)/self._stride) + 1
         self._output_chunk_size = numpy.ceil((self._chunk_size - self._window_size)/self._stride) + 1
-        self._output = numpy.zeros([self._num_output_classes] + list(output_resolution), dtype=numpy.float32)
+        self._output = numpy.zeros([self._num_output_classes] + list(output_resolution), dtype=dtype)
         return self._output
 
     def set_classifier_window_size(self, window_size):
