@@ -1,0 +1,129 @@
+name: "fish_filter"
+
+layer {
+  name: "training_cells"
+  type: "Python"
+  top: "image"
+  top: "label"
+
+  include {
+    phase: TRAIN
+  }
+
+  python_param {
+    module: "fisherman.caffe_layers"
+    layer: "ChunkingFishFovDataLayer"
+    param_str: "{\'tops\': [\'image\', \'label\'], \'seed\': 1337, \'data_dir\': \'/home/sam/code/fisherman/data/dense_labelling/', \'split\': \'train\', 'n_samples': 50}"
+    
+  }
+}
+
+layer {
+  name: "testing_cells"
+  type: "Python"
+  top: "image"
+  top: "label"
+  include {
+    phase: TEST
+  }
+
+  python_param {
+    module: "fisherman.caffe_layers"
+    layer: "ChunkingFishFovDataLayer"
+    param_str: "{\'tops\': [\'image\', \'label\'], \'seed\': 1337, \'data_dir\': \'/home/sam/code/fisherman/data/dense_labelling/', \'split\': \'test\', 'n_samples': 5}"
+  }
+}
+
+# Input is 101 x 101
+
+layer {
+  name: "conv1"
+  type: "Convolution"
+  bottom: "image"
+  top: "conv1"
+
+  param {
+    lr_mult: 1
+  }
+
+  param {
+    lr_mult: 2
+  }
+
+  convolution_param {
+    num_output: 10
+    kernel_size: 51
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer { 
+    name: "sigmoid1"
+    type: "Sigmoid" 
+    bottom: "conv1" 
+    top: "sigmoid1" 
+}
+
+# Convs to 51 x 51
+
+layer {
+  name: "conv2"
+  type: "Convolution"
+  bottom: "sigmoid1"
+  top: "conv2"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 2
+  }
+  convolution_param {
+    num_output: 2
+    kernel_size: 51
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+# Convs to 1 x 1
+
+#layer { name: "relu2" type: "ReLU" bottom: "conv2" top: "conv2" }
+
+layer {
+  name: "accuracy"
+  type: "Accuracy"
+  bottom: "conv2"
+  bottom: "label"
+  top: "accuracy"
+  include {
+    phase: TEST
+  }
+}
+
+layer {
+  name: "loss"
+  type: "InfogainSoftmaxLoss"
+  bottom: "conv2"
+  bottom: "label"
+  top: "loss"
+  infogain_loss_param { 
+    source: "/home/sam/code/fisherman/infogainH.binaryproto" 
+  } 
+  loss_param {
+    normalize: true
+  }
+  softmax_param {
+    axis: 1
+  }
+}

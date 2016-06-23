@@ -1,0 +1,77 @@
+name: "fish_net"
+input: "data"
+input_dim: 2
+input_dim: 2
+input_dim: 101
+input_dim: 101
+
+# Input is 101 x 101
+
+layer {
+  name: "conv1"
+  type: "Convolution"
+  bottom: "data"
+  top: "conv1"
+
+  param {
+    lr_mult: 1
+  }
+
+  param {
+    lr_mult: 2
+  }
+
+  convolution_param {
+    num_output: 10
+    kernel_size: 25
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer { 
+    name: "sigmoid1"
+    type: "Sigmoid" 
+    bottom: "conv1" 
+    top: "sigmoid1" 
+}
+
+# Convs to 25 x 25
+
+layer {
+  name: "conv2"
+  type: "Convolution"
+  bottom: "sigmoid1"
+  top: "conv2"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 2
+  }
+  convolution_param {
+    num_output: 2
+    kernel_size: 25
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+# Convs to 1 x 1
+
+layer {
+  name: "prob"
+  type: "Softmax"
+  bottom: "conv2"
+  top: "prob"
+}

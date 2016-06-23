@@ -9,7 +9,6 @@ from skimage import io
 from exceptions import NameError, IndexError, TypeError
 from fisherman import math
 from fisherman import generators as gen
-from collections import Iterable
 from itertools import cycle, izip
 
 
@@ -58,7 +57,7 @@ class TrainingExample(object):
 
         # The built in caffe method properly handles different data types
 
-        return caffe.io.array_to_datum(self.image.transpose(2,0,1), label=int(self.label))
+        return caffe.io.array_to_datum(self.image.transpose(2,0,1), label=self.label)
 
 
     def display(self):
@@ -195,15 +194,11 @@ class SourceImageImporter(object):
         """
         image = io.imread(self.image_path)
 
-        if self.transpose is not None:
-            image = image.transpose(*self.transpose)
-
-        # TODO Temp
-        if image.shape[0] == 2:
-            image = image.transpose(1, 2, 0)
-
         if self.channels_of_interest is not 'all':
             image = image[:,:,self.channels_of_interest]
+
+        if self.transpose is not None:
+            image = image.transpose(*self.transpose)
 
         if normalize:
             return math.normalize_by_channel(image)
@@ -345,7 +340,7 @@ class LMDatabaseFactory(CaffeDataFactory):
          data in training_example.image before
         """
         # Write the datum to the database
-        datum = training_example.to_datum
+        datum = training_example.to_datum()
         with self.db.begin(write=True) as txn:
             txn.put(training_example.tag, datum.SerializeToString())
 

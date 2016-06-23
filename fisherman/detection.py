@@ -25,7 +25,7 @@ class ImageChunker(object):
         By default, chunk_size = min([H, W])
         """
         self._image = image
-        self._image_resolution = numpy.asarray(image.shape[1:], dtype=numpy.float32)
+        self._image_resolution = numpy.asarray(image.shape[-2:], dtype=numpy.float32)
         self._chunk_size = numpy.asarray(self._image_resolution.min(), dtype=numpy.float32)
 
         # The ImageChunker tracks the current chunk row and column as it iterates. 
@@ -87,7 +87,7 @@ class ImageChunker(object):
         start_col, end_col = col_range
         self.set_current_chunk_bounds(start_row, start_col, end_row, end_col)
 
-        return self._image[:, start_row:end_row, start_col:end_col]
+        return self._image[..., start_row:end_row, start_col:end_col]
 
     def set_chunk_size(self, chunk_size):
         """
@@ -96,9 +96,9 @@ class ImageChunker(object):
         The chunk_size must be smaller than the height and width of the input image
         """
         chunk_size = numpy.asarray(chunk_size, dtype=numpy.float32)
-        if not all(self._image_resolution >= chunk_size):
+        if not all(self._image_resolution[-2:] >= chunk_size):
             msg = "Chunk size must be less than or equal to the image height and width\n" \
-                "Image Height: %r, Image Width: %r" % tuple(self._image_resolution)
+                "Image Resolution: {}".format(self._image_resolution)
             raise error_handling.ConfigurationException(msg)
 
         self._chunk_size = chunk_size
@@ -194,19 +194,19 @@ class ImageChunkerWithOutput(ImageChunker):
         # Ensure that the end row and column are within the boundries of the image
         # If the range exceeds the boundries, the entire range is shifted inwards such that it
         #  ends at the boundry instead
-        if end_row > self._image.shape[1]:
-            overflow = end_row - self._image.shape[1]
+        if end_row > self._image.shape[-2]:
+            overflow = end_row - self._image.shape[-2]
             start_row -= overflow
             end_row -= overflow
 
-        if end_col > self._image.shape[2]:
-            overflow = end_col - self._image.shape[2]
+        if end_col > self._image.shape[-1]:
+            overflow = end_col - self._image.shape[-1]
             start_col -= overflow
             end_col -= overflow
 
         self.set_current_chunk_bounds(start_row, start_col, end_row, end_col)
 
-        return self._image[:, start_row:end_row, start_col:end_col]
+        return self._image[..., start_row:end_row, start_col:end_col]
 
     def _get_output_chunk(self, chunk_row, chunk_col):
         """
