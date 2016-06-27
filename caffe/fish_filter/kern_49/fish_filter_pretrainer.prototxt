@@ -2,7 +2,7 @@ name: "fish_filter"
 
 layer {
   name: "training_cells"
-  type: "Python"
+  type: "Data"
   top: "image"
   top: "label"
 
@@ -10,31 +10,31 @@ layer {
     phase: TRAIN
   }
 
-  python_param {
-    module: "fisherman.caffe_layers"
-    layer: "ChunkingFishFovDataLayer"
-    param_str: "{\'tops\': [\'image\', \'label\'], \'seed\': 1337, \'data_dir\': \'/home/sam/code/fisherman/data/dense_labelling/', \'split\': \'train\', 'n_samples': 50, 'channels_of_interest': (1,)}"
-    
+  data_param {
+    source: "/home/sam/code/fisherman/data/original_and_partial_qc/original_and_partial_qc_training_db"
+    batch_size: 256
+    backend: LMDB
   }
 }
 
 layer {
   name: "testing_cells"
-  type: "Python"
+  type: "Data"
   top: "image"
   top: "label"
+
   include {
     phase: TEST
   }
 
-  python_param {
-    module: "fisherman.caffe_layers"
-    layer: "ChunkingFishFovDataLayer"
-    param_str: "{\'tops\': [\'image\', \'label\'], \'seed\': 1337, \'data_dir\': \'/home/sam/code/fisherman/data/dense_labelling/', \'split\': \'test\', 'n_samples': 5, 'channels_of_interest': (1,)}"
+  data_param {
+    source: "/home/sam/code/fisherman/data/original_and_partial_qc/original_and_partial_qc_testing_db"
+    batch_size: 256
+    backend: LMDB
   }
 }
 
-# Input is 101 x 101
+# Input is 49 x 49
 
 layer {
   name: "conv1"
@@ -113,17 +113,8 @@ layer {
 
 layer {
   name: "loss"
-  type: "InfogainSoftmaxLoss"
+  type: "SoftmaxWithLoss"
   bottom: "conv2"
   bottom: "label"
   top: "loss"
-  infogain_loss_param { 
-    source: "/home/sam/code/fisherman/infogainH.binaryproto" 
-  } 
-  loss_param {
-    normalize: true
-  }
-  softmax_param {
-    axis: 1
-  }
 }

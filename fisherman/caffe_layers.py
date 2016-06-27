@@ -27,6 +27,8 @@ class FishFovDataLayer(caffe.Layer):
         - tops: list of tops to output from {image, label}
         - randomize: load in random order (default: True)
         - seed: seed for randomization (default: None / current time)
+        - channels_of_interest: tuple denoting the channels of interest to extract from the 
+          source image. (default: (1,2))
 
         example: params = dict(data_dir="/path/to/fish_training_data", split="train",
                                 tops=['image', 'label'])
@@ -38,6 +40,7 @@ class FishFovDataLayer(caffe.Layer):
         #self.random = params.get('randomize', True)
         self.seed = params.get('seed', None)
         self.n_samples = params.get('n_samples', 1)
+        self.channels_of_interest = params.get('channels_of_interest', (1,2))
 
 
         # store top data for reshape + forward
@@ -106,7 +109,7 @@ class FishFovDataLayer(caffe.Layer):
         """
         elem = self.index[key]
         importer = data_io.SourceImageImporter(path.join(self.data_dir, elem['image']))
-        importer.set_channels_of_interest((1,2))
+        importer.set_channels_of_interest(self.channels_of_interest)
         importer.set_transpose(2,0,1)
         in_ = importer.import_image().astype(numpy.float32)
         # TODO: Mean/std normalize here

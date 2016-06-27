@@ -1,11 +1,11 @@
 name: "fish_net"
 input: "data"
-input_dim: 2
-input_dim: 2
-input_dim: 101
-input_dim: 101
+input_dim: 1
+input_dim: 1
+input_dim: 49
+input_dim: 49
 
-# Input is 101 x 101
+# Input is 49 x 49
 
 layer {
   name: "conv1"
