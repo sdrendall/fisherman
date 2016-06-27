@@ -1,6 +1,9 @@
+#! /usr/bin/env python
+
 import numpy
 import javabridge
 import bioformats
+import skimage
 from argparse import ArgumentParser
 from bioformats import log4j
 from skimage import io
@@ -31,6 +34,13 @@ def configure_parser():
         help='The size of the region to be cropped, defaults to 500',
         default=500
     )
+    parser.add_argument(
+        '-p', '--percentile',
+        type=float,
+        help='Percentile to set to the maximum intensity level.'
+             ' Image will not be rescaled if no argument is given',
+        default=-1
+    )
 
     return parser
 
@@ -52,13 +62,26 @@ def load_vsi(vsi_path):
 
     print "Loading %s" % vsi_path
     with bioformats.ImageReader(vsi_path) as reader:
-        #dapi = reader.read(c=0, rescale=False).astype(numpy.uint16)
+        dapi = reader.read(c=0, rescale=False).astype(numpy.uint16)
         cfos = reader.read(c=1, rescale=False).astype(numpy.uint16)
 
     javabridge.kill_vm()
-    #return numpy.dstack((cfos, dapi))
-    return cfos
+    return numpy.dstack((numpy.zeros(cfos.shape, dtype=numpy.uint16), cfos, dapi))
+    #return cfos
 
+def remap_values(array, percentile):
+    value_map = numpy.zeros(2**16, dtype=numpy.uint16)
+    array_min = array.min()
+    saturation_point = numpy.percentile(array, percentile, interpolation='nearest')
+    value_map[:array_min] = 0
+    value_map[array_min:saturation_point] = numpy.linspace(
+        0,
+        2**16 -1, 
+        num=(saturation_point - array_min), 
+        endpoint=False
+    )
+    value_map[saturation_point:] = 2**16 -1
+    return value_map[array]
 
 def main():
     parser = configure_parser()
@@ -67,7 +90,11 @@ def main():
     image = load_vsi(args.vsi_path)
     cropped_image = crop_image(image, args.top_left, args.crop_size)
 
-    io.imsave(args.output_path, cropped_image)
+    if args.percentile > 0:
+        cropped_image[..., 1] = remap_values(cropped_image[..., 1], args.percentile)
+
+    skimage.external.tifffile.imsave(args.output_path, cropped_image, compress=0)
+
 
 
 if __name__ == '__main__':
