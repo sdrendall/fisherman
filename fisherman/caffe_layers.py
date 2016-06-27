@@ -29,6 +29,7 @@ class FishFovDataLayer(caffe.Layer):
         - seed: seed for randomization (default: None / current time)
         - channels_of_interest: tuple denoting the channels of interest to extract from the 
           source image. (default: (1,2))
+        - chunker_params: params to pass to the image chunker. See detection.ImageChunkerWithOutput
 
         example: params = dict(data_dir="/path/to/fish_training_data", split="train",
                                 tops=['image', 'label'])
@@ -41,6 +42,13 @@ class FishFovDataLayer(caffe.Layer):
         self.seed = params.get('seed', None)
         self.n_samples = params.get('n_samples', 1)
         self.channels_of_interest = params.get('channels_of_interest', (1,2))
+        self.chunker_params = {
+            'chunk_size': 125,
+            'window_size': 101,
+            'stride': 1,
+            'num_classes': 1
+        }
+        self.chunker_params.update(params.get('chunker_params', {}))
 
 
         # store top data for reshape + forward
@@ -144,15 +152,7 @@ class ChunkingFishFovDataLayer(FishFovDataLayer):
     """
 
     def setup(self, bottom, top):
-        super(ChunkingFishFovDataLayer, self).setup(bottom, top)
-
-        self.chunker_params = {
-            'chunk_size': 125,
-            'window_size': 101,
-            'stride': 1,
-            'num_classes': 1
-        }
-
+        FishFovDataLayer.setup(self, bottom, top)
         self.reset_chunk_cache()
 
 
