@@ -107,3 +107,38 @@ def mean(seq):
     Computes the mean of a given sequence
     """
     return numpy.asarray(list(seq)).mean()
+
+
+class IntSequenceSampler(object):
+    
+    def __init__(self, upper_bound, n_samples=None, resample_period=100):
+        self.upper_bound = upper_bound
+        self.resample_period = resample_period
+        self.master_set = numpy.arange(upper_bound, dtype=numpy.int64)
+        self.resample_count = 0
+
+        if n_samples is None:
+            self.n_samples = upper_bound
+        else:
+            self.n_samples = n_samples
+
+        self.resample_sample_set()
+        
+    def get_samples(self):
+        self.resample_count += 1
+        if self.resample_count % self.resample_period == 0:
+            self.resample_sample_set()
+            return self.sample_set
+
+        else:
+            self.sample_set += numpy.random.randint(self.upper_bound)
+            self.sample_set %= self.upper_bound
+            return self.sample_set
+
+
+    def resample_sample_set(self):
+        self.sample_set = numpy.random.choice(
+            self.master_set, 
+            size=self.n_samples,
+            replace=False
+        )

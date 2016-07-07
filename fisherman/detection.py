@@ -342,7 +342,7 @@ class ImageChunkerWithOutput(ImageChunker):
         """
         if (self._chunk_size - self._window_size + 1) % self._stride != 0:
             msg = "Chunk size not compatible with given window size and stride!\n" \
-                  "(chunk_size - window_size + 1) % stride must equal 1 to prevent output aliasing!"
+                  "(chunk_size - window_size + 1) % stride must equal 0 to prevent output aliasing!"
             raise TypeError(msg)
 
 
