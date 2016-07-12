@@ -402,6 +402,31 @@ def get_datum_data(db):
         )]
 
 
+def load_vsi(vsi_path):
+    """
+    Load a vsi image at the given path.  The channels that are loaded, 
+     and the order in which they are loaded are currently hard coded
+
+    This function uses the bioformats and javabridge packages. It also 
+     requires a functional jvm
+    """
+    import javabridge
+    import bioformats
+    from bioformats import log4j
+
+    javabridge.start_vm(class_path=bioformats.JARS)
+    log4j.basic_config()
+    print "Loading %s" % vsi_path
+
+    with bioformats.ImageReader(vsi_path) as reader:
+        dapi = reader.read(c=0, rescale=False).astype(numpy.uint16)
+        cfos = reader.read(c=1, rescale=False).astype(numpy.uint16)
+
+    javabridge.kill_vm()
+
+    return numpy.dstack((cfos, dapi))
+
+
 def main():
     from sys import argv
 

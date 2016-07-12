@@ -43,30 +43,10 @@ def configure_argument_parser():
         help='Disable output messages')
     parser.add_argument('--gpu', action='store_true', default=False,
         help='Compute network weights using a gpu. Defaults to cpu usage')
-
+    parser.add_argument('-v', '--vsi', action='store_true', default=False,
+        help='Specifies that the input image is in the vsi format')
 
     return parser
-
-def load_vsi(vsi_path):
-    """
-    Load a vsi image at the given path.  The channels that are loaded, 
-     and the order in which they are loaded are currently hard coded
-
-    Note: This requires an active jvm via javabridge 
-     (i.e. javabridge.start_vm(class_path=bioformats.JARS) must have been called prior to using this function)
-    """
-    javabridge.start_vm(class_path=bioformats.JARS)
-    log4j.basic_config()
-    print "Loading %s" % vsi_path
-
-    with bioformats.ImageReader(vsi_path) as reader:
-        dapi = reader.read(c=0, rescale=False).astype(numpy.uint16)
-        cfos = reader.read(c=1, rescale=False).astype(numpy.uint16)
-
-    javabridge.kill_vm()
-
-    #return numpy.dstack((cfos, dapi)).transpose(2,0,1)
-    return cfos[numpy.newaxis, ...]
 
 def extract_input_channels(source_image, args):
     if args.channels is None:
@@ -99,7 +79,11 @@ def main():
     args = parser.parse_args()
 
     # Load input image
-    source_image = io.imread(args.image_path)
+    if args.vsi:
+        source_image = load_vsi(args.image_path)
+    else:
+        source_image = io.imread(args.image_path)
+
     input_image = extract_input_channels(source_image, args).astype(numpy.float32)
     input_image = transpose_input_image(input_image)
     input_image = rescale_image(input_image, args)
