@@ -3,15 +3,15 @@ import numpy
 import bioformats
 import javabridge
 import h5py
-from os import path
+from os import path, environ
 from skimage import io
 from bioformats import log4j
 from fisherman import data_io, math, detection
 from matplotlib.pyplot import figure, show, imshow
 from argparse import ArgumentParser
 
-MODEL_PATH = '/home/sam/code/fisherman/fish_net_conv_deploy_weights.caffemodel'
-NET_PATH = '/home/sam/code/fisherman/caffe/fish_net/kern_149/fish_net_conv_deploy.prototxt'
+MODEL_PATH = path.join(environ['FISHERMAN_ROOT'], 'fish_net_conv_deploy_weights.caffemodel')
+NET_PATH = path.join(environ['FISHERMAN_ROOT'], '/caffe/fish_net/kern_149/fish_net_conv_deploy.prototxt')
 
 NET_PARAMS ={
     'kernel': 149,
