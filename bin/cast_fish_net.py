@@ -4,6 +4,7 @@ import bioformats
 import javabridge
 import h5py
 from os import path
+from time import strftime
 from skimage import io
 from bioformats import log4j
 from fisherman import data_io, math, detection
@@ -12,8 +13,7 @@ from argparse import ArgumentParser
 
 MODEL_PATH = '/home/sam/code/fisherman/fish_net_conv_deploy_weights.caffemodel'
 NET_PATH = '/home/sam/code/fisherman/caffe/fish_net/kern_149/fish_net_conv_deploy.prototxt'
-
-NET_PARAMS ={
+NET_PARAMS = {
     'kernel': 149,
     'stride': 15,
     'num_classes': 2
@@ -26,16 +26,24 @@ def configure_argument_parser():
     # Optional Arguments
     parser.add_argument('-D','--display', action='store_true', default=False,
         help='Display the input image and output mask using matplotlib')
-    parser.add_argument('-o', '--output', type=path.expanduser, default='./output_mask.tif',
+    parser.add_argument('-o', '--output', type=path.expanduser, default='./fish_net_mask.tif',
         help='Location to save output mask')
     parser.add_argument('-c', '--channels', type=int, nargs='+', default=None,
         help='Channels (zero based) to use as input to network. Defaults to all')
     parser.add_argument('-s', '--scale', type=float, nargs='+', default=1.0,
         help='Scalar or array to scale the intensity values of the input image by. If multiple values are'
-              'given, a different scale will be applied to each image channel.')
+             'given, a different scale will be applied to each image channel.')
     parser.add_argument('-f', '--offset', type=float, nargs='+', default=0.0,
         help='Scalar or array to offset the intensity values of the input image by. If multiple values are'
-              'given, a different offset will be applied to each image channel.')
+             'given, a different offset will be applied to each image channel.')
+    parser.add_argument('-O', '--hdf5_output', type=path.expanduser, default=None,
+        help='Path to optional hdf5 output. File will contain the raw output probabilities in addition to the '
+             'class segmentation mask.')
+    parser.add_argument('-q', '--quiet', action='store_true', default=False,
+        help='Disable output messages')
+    parser.add_argument('--gpu', action='store_true', default=False,
+        help='Compute network weights using a gpu. Defaults to cpu usage')
+
 
     return parser
 
@@ -81,51 +89,69 @@ def rescale_image(im, args):
 
     return im
 
+def debug_out(msg, args):
+    if not args.quiet:
+        print "[{}]:".format(strftime('%H:%M:%S')), msg
+
 def main():
+    # Configure parser
     parser = configure_argument_parser()
     args = parser.parse_args()
 
+    # Load input image
     source_image = io.imread(args.image_path)
     input_image = extract_input_channels(source_image, args).astype(numpy.float32)
     input_image = transpose_input_image(input_image)
     input_image = rescale_image(input_image, args)
 
-
-    caffe.set_mode_cpu()
+    # Configure Caffe
     net = caffe.Net(NET_PATH, MODEL_PATH, caffe.TEST)
 
+    if args.gpu:
+        caffe.set_mode_gpu()
+    else:
+        caffe.set_mode_cpu()
+
+    # Allocate output
+    #   An additional stride - kernel pixels are added to the border of the output to account for the redundant final pixel
+    #   produced during each pass
     output_resolution = numpy.asarray(input_image.shape[-2:]) - NET_PARAMS['kernel'] + NET_PARAMS['stride']
     output = numpy.zeros((NET_PARAMS['num_classes'], output_resolution[0], output_resolution[1]))
 
+    # Compute network outputs
     for i in range(0, NET_PARAMS['stride']):
         for j in range(0, NET_PARAMS['stride']):
             progress = 100.0 * (i*NET_PARAMS['stride'] + j)/NET_PARAMS['stride']**2
-            print "Progress: {0:.2f}".format(progress)
+            debug_out("{0:.2f}% progress".format(progress), args)
             input_view = input_image[numpy.newaxis, ..., i:, j:]
             net.blobs['data'].reshape(*input_view.shape)
             output[..., i::NET_PARAMS['stride'], j::NET_PARAMS['stride'] ] = \
                 net.forward_all(data=input_view[numpy.newaxis, ...])['prob']
 
     output = output[..., :-NET_PARAMS['stride'] + 1, :-NET_PARAMS['stride'] + 1]
-    output_mask = output.argmax(0)
+    mask = output.argmax(0)
 
-    print "Mask shape: ", output_mask.shape
-    print "Output shape: ", output.shape
-    print "Max Output: ", output_mask.max()
-    print "Mask mean: ", output_mask.mean()
+    debug_out("Mask shape: {}".format(mask.shape), args)
+    debug_out("Output shape: {}".format(output.shape), args)
+    debug_out("Max Output: {}".format(mask.max()), args)
+    debug_out("Mask mean: {}".format(mask.mean()), args)
 
-    #hfile = h5py.File('fish_filter_output.hdf5', 'w')
-    #hfile.create_dataset("output", data=output)
-    #hfile.close()
+    # Save output
+    io.imsave(args.output, mask.astype(numpy.uint8))
+
+    if args.hdf5_output is not None:
+        hfile = h5py.File(args.hdf5_output, 'w')
+        hfile.create_dataset("output", data=output)
+        hfile.create_dataset("mask", data=mask)
+        hfile.close()
     
-    io.imsave(args.output, output_mask.astype(numpy.uint8))
 
     if args.display:
         figure()
         imshow(source_image)
 
         figure()
-        imshow(output_mask)
+        imshow(mask)
 
         show()
 
