@@ -1,8 +1,11 @@
+#! /usr/bin/env python
+
 import caffe
 import numpy
 import bioformats
 import javabridge
 import h5py
+import ast
 from os import path, environ
 from time import strftime
 from skimage import io
@@ -12,7 +15,10 @@ from matplotlib.pyplot import figure, show, imshow
 from argparse import ArgumentParser
 
 MODEL_PATH = path.join(environ['FISHERMAN_ROOT'], 'fish_net_conv_deploy_weights.caffemodel')
-NET_PATH = path.join(environ['FISHERMAN_ROOT'], '/caffe/fish_net/kern_149/fish_net_conv_deploy.prototxt')
+NET_PATH = path.join(environ['FISHERMAN_ROOT'], 'caffe/fish_net/kern_149/fish_net_conv_deploy.prototxt')
+
+print "MODEL_PATH: {}".format(MODEL_PATH)
+print "NET_PATH: {}".format(NET_PATH)
 
 NET_PARAMS = {
     'kernel': 149,
@@ -46,6 +52,9 @@ def configure_argument_parser():
         help='Compute network weights using a gpu. Defaults to cpu usage')
     parser.add_argument('-v', '--vsi', action='store_true', default=False,
         help='Specifies that the input image is in the vsi format')
+    parser.add_argument('-p', '--chunker_params', type=ast.literal_eval, default={'chunk_size': 300, 'window_size': NET_PARAMS['kernel'], 'stride': 1},
+        help='Use an image chunker to compute the input and output. Chunker params should be specified as a string'
+             'Default: {"chunk_size": 300, "stride": 1, "window_size": %d, "num_classes": 2}' % NET_PARAMS['kernel'])
 
     return parser
 
@@ -74,6 +83,26 @@ def debug_out(msg, args):
     if not args.quiet:
         print "[{}]:".format(strftime('%H:%M:%S')), msg
 
+def compute_network_outputs(input_image, net, args):
+    # Allocate output
+    #   An additional stride - kernel pixels are added to the border of the output to account for the redundant final pixel
+    #   produced during each pass
+    output_resolution = numpy.asarray(input_image.shape[-2:]) - NET_PARAMS['kernel'] + NET_PARAMS['stride']
+    output = numpy.zeros((NET_PARAMS['num_classes'], output_resolution[0], output_resolution[1]))
+
+    # Compute network outputs
+    for i in range(0, NET_PARAMS['stride']):
+        for j in range(0, NET_PARAMS['stride']):
+            #progress = 100.0 * (i*NET_PARAMS['stride'] + j)/NET_PARAMS['stride']**2
+            #debug_out("{0:.2f}% progress".format(progress), args)
+            input_view = input_image[numpy.newaxis, ..., i:, j:]
+            net.blobs['data'].reshape(*input_view.shape)
+            output[..., i::NET_PARAMS['stride'], j::NET_PARAMS['stride']] = \
+                net.forward_all(data=input_view[numpy.newaxis, ...])['prob']
+
+    return output[..., :-NET_PARAMS['stride'] + 1, :-NET_PARAMS['stride'] + 1]
+
+
 def main():
     # Configure parser
     parser = configure_argument_parser()
@@ -81,7 +110,7 @@ def main():
 
     # Load input image
     if args.vsi:
-        source_image = load_vsi(args.image_path)
+        source_image = data_io.load_vsi(args.image_path)
     else:
         source_image = io.imread(args.image_path)
 
@@ -97,23 +126,17 @@ def main():
     else:
         caffe.set_mode_cpu()
 
-    # Allocate output
-    #   An additional stride - kernel pixels are added to the border of the output to account for the redundant final pixel
-    #   produced during each pass
-    output_resolution = numpy.asarray(input_image.shape[-2:]) - NET_PARAMS['kernel'] + NET_PARAMS['stride']
-    output = numpy.zeros((NET_PARAMS['num_classes'], output_resolution[0], output_resolution[1]))
+    chunker_params = NET_PARAMS.copy()
+    chunker_params.update(args.chunker_params)
+    chunker = detection.ImageChunkerWithOutput(input_image, **chunker_params)
+    output = chunker.allocate_output()
 
-    # Compute network outputs
-    for i in range(0, NET_PARAMS['stride']):
-        for j in range(0, NET_PARAMS['stride']):
-            progress = 100.0 * (i*NET_PARAMS['stride'] + j)/NET_PARAMS['stride']**2
-            debug_out("{0:.2f}% progress".format(progress), args)
-            input_view = input_image[numpy.newaxis, ..., i:, j:]
-            net.blobs['data'].reshape(*input_view.shape)
-            output[..., i::NET_PARAMS['stride'], j::NET_PARAMS['stride'] ] = \
-                net.forward_all(data=input_view[numpy.newaxis, ...])['prob']
+    num_chunks = chunker.get_number_of_chunks()
+    for i, (input_chunk, output_chunk )in enumerate(chunker):
+        progress = 100.0 * i/num_chunks
+        debug_out("{0:.2f}% progress".format(progress), args)
+        output_chunk[...] = compute_network_outputs(input_chunk, net, args)[...]
 
-    output = output[..., :-NET_PARAMS['stride'] + 1, :-NET_PARAMS['stride'] + 1]
     mask = output.argmax(0)
 
     debug_out("Mask shape: {}".format(mask.shape), args)
@@ -130,7 +153,6 @@ def main():
         hfile.create_dataset("mask", data=mask)
         hfile.close()
     
-
     if args.display:
         figure()
         imshow(source_image)

@@ -118,6 +118,10 @@ class ImageChunker(object):
         """
         return self._image.shape[0], self.get_chunk_size(), self.get_chunk_size()
 
+    def get_number_of_chunks(self):
+        num_chunk_rows, num_chunk_cols = self._get_chunk_grid_shape()
+        return num_chunk_rows * num_chunk_cols
+
 
 class ImageChunkerWithOutput(ImageChunker):
 
@@ -343,6 +347,8 @@ class ImageChunkerWithOutput(ImageChunker):
         if (self._chunk_size - self._window_size + 1) % self._stride != 0:
             msg = "Chunk size not compatible with given window size and stride!\n" \
                   "(chunk_size - window_size + 1) % stride must equal 0 to prevent output aliasing!"
+            print "chunk_size: {}".format(self._chunk_size)
+            print "window_size: {}".format(self._window_size)
             raise TypeError(msg)
 
 
