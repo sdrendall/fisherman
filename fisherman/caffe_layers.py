@@ -7,15 +7,15 @@ from os import path
 from fisherman import data_io, detection, math
 from cProfile import Profile
 
+SCALE = (0.00325218, 0.00021881)
+OFFSET = (469.376, 4183.8239)
 
-def rescale_image(image):
+def rescale_image(image, scale=SCALE, offset=OFFSET):
     """
     Performs mean and std normalization on the given image, on a channel by channel basis.
     Hardcoded to match the original_and_partial_qc_2_channel_k149_scaled dataset.
     """
     for i in range(0, 2):
-        scale = (0.00325218, 0.00021881)
-        offset = (469.376, 4183.8239)
         image[i, ...] -= offset[i]
         image[i, ...] *= scale[i]
 
@@ -68,7 +68,6 @@ class FishFovDataLayer(caffe.Layer):
             'num_classes': 1
         }
         self.chunker_params.update(params.get('chunker_params', {}))
-
 
         # store top data for reshape + forward
         self.data = {}
@@ -243,6 +242,8 @@ class DataMapLayer(caffe.Layer):
         - channels_of_interest: tuple denoting the channels of interest to extract from the
           source image. (default: (1,2))
         - kernel: size of kernel to load images of
+        - stats_path: path to the vsi_stats.json file that contains normalization stats
+        - normalization: {static, median, mean} select normalization mode, defaults to static
 
         example: params = dict(data_dir="/path/to/fish_training_data", split="train",
                                 tops=['image', 'label'])
@@ -255,6 +256,8 @@ class DataMapLayer(caffe.Layer):
         self.seed = params.get('seed', None)
         self.samples_per_class = params.get('samples_per_class', 1)
         self.channels_of_interest = params.get('channels_of_interest', (1,2))
+        self.stats_path = params.get('stats_path', None)
+        self.normalization = params.get('normalization', 'static').lower()
         self.profiler = Profile()
 
         # store top data for reshape + forward
@@ -267,6 +270,11 @@ class DataMapLayer(caffe.Layer):
         if len(bottom) != 0:
             raise Exception("Do not define a bottom.")
 
+        if self.stats_path is not None:
+            self.stats_dict = json.load(open(self.stats_path))
+        elif self.normalization != 'static':
+            raise Exception("stats_path must be specified for normalization modes other than static")
+
         index_path = path.join(self.data_dir, '{}_index.json'.format(self.split))
         index = json.load(open(index_path))
         self.source_image_mask_pairs = \
@@ -275,12 +283,10 @@ class DataMapLayer(caffe.Layer):
         # load image indices for images and labels
         self.initialize_data_map()
 
-
         #if self.samples_per_class > len(self.unique_labels):
             #raise Exception("samples_per_class cannot exceed the number of instances of each class.")
         if self.samples_per_class < 1:
             raise Exception("samples_per_class cannot be less than 1.")
-
 
     def initialize_data_map(self):
         """
@@ -329,6 +335,33 @@ class DataMapLayer(caffe.Layer):
                 label = int(mask[..., i, j])
                 yield image, label # add a new axis for stacking images
 
+    def normalize_image(self, image, entry):
+        """
+        Normalize the given image according to the specified normalization mode
+        """
+        if self.normalization == 'static':
+            return rescale_image(image)
+
+        elif self.normalization == 'mean':
+            norm_stats = get_normalization_stats(entry)
+            offset = [c['mean'] for c in norm_stats['channel_stats']]
+            return rescale_image(image, offset=offset)
+
+        elif self.normalization == 'median':
+            norm_stats = get_normalization_stats(entry)
+            offset = [c['median'] for c in norm_stats['channel_stats']]
+            return rescale_image(image, offset=offset)
+
+        else:
+            raise Exception('Encountered unknown normalization method: {}'.format(self.normalization))
+
+    def get_normalization_stats(self, entry):
+        """
+        Get the appropriate nomalization stats dict from the master stats dict for the given entry
+        """
+        vsi_name = path.basename(entry['vsi_filename'])
+        return self.stats_dict[vsi_name]
+
     def load_source_image(self, entry):
         """
         Loads the source image specified by the given entry
@@ -338,7 +371,7 @@ class DataMapLayer(caffe.Layer):
         importer.set_transpose(2,0,1)
         image = importer.import_image().astype(numpy.float32)
         # TODO: Mean/std normalize here
-        return rescale_image(image)[numpy.newaxis, ...]
+        return self.normalize_image(image, entry)[numpy.newaxis, ...]
 
     def load_mask(self, entry):
         """
