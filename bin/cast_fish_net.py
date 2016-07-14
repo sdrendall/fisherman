@@ -6,6 +6,7 @@ import bioformats
 import javabridge
 import h5py
 import ast
+import os
 from os import path, environ
 from time import strftime
 from skimage import io
@@ -14,17 +15,29 @@ from fisherman import data_io, math, detection
 from matplotlib.pyplot import figure, show, imshow
 from argparse import ArgumentParser
 
-MODEL_PATH = path.join(environ['FISHERMAN_ROOT'], 'fish_net_conv_deploy_weights.caffemodel')
-NET_PATH = path.join(environ['FISHERMAN_ROOT'], 'caffe/fish_net/kern_149/fish_net_conv_deploy.prototxt')
-
-print "MODEL_PATH: {}".format(MODEL_PATH)
-print "NET_PATH: {}".format(NET_PATH)
+FISHERMAN_ROOT = environ.get('FISHERMAN_ROOT', os.getcwd())
+MODEL_PATH_DEFAULT = path.join(FISHERMAN_ROOT, 'models/demo_net_output_iter_10000.caffemodel')
+NET_PATH_DEFAULT = path.join(FISHERMAN_ROOT, 'caffe/demo_net_deploy.prototxt')
 
 NET_PARAMS = {
-    'kernel': 149,
-    'stride': 15,
+    'kernel': 13,
+    'stride': 1,
     'num_classes': 2
 }
+
+SCALE = (1/743.13, 1/595.10) # Value to scale each channel by, typically 1/std
+OFFSET = (323.4328, 244.4754) # Value to offset each channel by, typically the mean
+
+def rescale_image(image, scale=SCALE, offset=OFFSET):
+    """
+    Performs mean and std normalization on the given image, on a channel by channel basis.
+    Hardcoded to match the original_and_partial_qc_2_channel_k149_scaled dataset.
+    """
+    for i in range(0, 2):
+        image[i, ...] -= offset[i]
+        image[i, ...] *= scale[i]
+
+    return image
 
 def configure_argument_parser():
     parser = ArgumentParser(description="Computes the output of fish-net for the given image")
@@ -52,6 +65,11 @@ def configure_argument_parser():
         help='Compute network weights using a gpu. Defaults to cpu usage')
     parser.add_argument('-v', '--vsi', action='store_true', default=False,
         help='Specifies that the input image is in the vsi format')
+    parser.add_argument('-n', '--net_path', type=path.expanduser, default=NET_PATH_DEFAULT,
+        help='Path to the net prototxt to deploy, Default: {}'.format(NET_PATH_DEFAULT))
+    parser.add_argument('-m', '--model_path', type=path.expanduser, default=MODEL_PATH_DEFAULT,
+        help='Path to the caffemodel containing the weights to evaluate with.'
+             ' Default: {}'.format(MODEL_PATH_DEFAULT))
     parser.add_argument('-p', '--chunker_params', type=ast.literal_eval, default={'chunk_size': 300, 'window_size': NET_PARAMS['kernel'], 'stride': 1},
         help='Use an image chunker to compute the input and output. Chunker params should be specified as a string'
              'Default: {"chunk_size": 300, "stride": 1, "window_size": %d, "num_classes": 2}' % NET_PARAMS['kernel'])
@@ -69,15 +87,6 @@ def transpose_input_image(input_image):
         return input_image[numpy.newaxis, ...]
     else:
         return input_image.transpose(2, 0, 1)
-
-def rescale_image(im, args):
-    for i in range(0, 2):
-        scale = (0.00325218, 0.00021881)
-        offset = (469.376, 4183.8239)
-        im[i, ...] -= offset[i]
-        im[i, ...] *= scale[i]
-
-    return im
 
 def debug_out(msg, args):
     if not args.quiet:
@@ -100,7 +109,10 @@ def compute_network_outputs(input_image, net, args):
             output[..., i::NET_PARAMS['stride'], j::NET_PARAMS['stride']] = \
                 net.forward_all(data=input_view[numpy.newaxis, ...])['prob']
 
-    return output[..., :-NET_PARAMS['stride'] + 1, :-NET_PARAMS['stride'] + 1]
+    if NET_PARAMS['stride'] == 1:
+        return output
+    else:
+        return output[..., :-NET_PARAMS['stride'] + 1, :-NET_PARAMS['stride'] + 1]
 
 
 def main():
@@ -116,10 +128,10 @@ def main():
 
     input_image = extract_input_channels(source_image, args).astype(numpy.float32)
     input_image = transpose_input_image(input_image)
-    input_image = rescale_image(input_image, args)
+    input_image = rescale_image(input_image)
 
     # Configure Caffe
-    net = caffe.Net(NET_PATH, MODEL_PATH, caffe.TEST)
+    net = caffe.Net(args.net_path, args.model_path, caffe.TEST)
 
     if args.gpu:
         caffe.set_mode_gpu()
@@ -158,7 +170,7 @@ def main():
         imshow(source_image)
 
         figure()
-        imshow(mask)
+        imshow(mask > 0)
 
         show()
 

@@ -1,42 +1,15 @@
-layer {
-  name: "training_cells"
-  type: "Python"
-  top: "image"
-  top: "label"
+name: "demo_net"
 
-  include {
-    phase: TRAIN
-  }
-
-  python_param {
-    module: "fisherman.caffe_layers"
-    layer: "DataMapLayer"
-    param_str: "{ 'tops': ['image', 'label'], 'data_dir': '/home/sam/code/fisherman/data/demo_data', 'split': 'training', 'samples_per_class': 256, 'kernel': 13 }"
-  }
-}
-
-layer {
-  name: "testing_cells"
-  type: "Python"
-  top: "image"
-  top: "label"
-
-  include {
-    phase: TEST
-  }
-
-  python_param {
-    module: "fisherman.caffe_layers"
-    layer: "DataMapLayer"
-    param_str: "{ 'tops': ['image', 'label'], 'data_dir': '/home/sam/code/fisherman/data/demo_data', 'split': 'testing', 'samples_per_class': 256, 'kernel': 13 }"
-  }
-}
-
+input: "data"
+input_dim: 1
+input_dim: 2
+input_dim: 13
+input_dim: 13
 
 layer {
   name: "conv1"
   type: "Convolution"
-  bottom: "image"
+  bottom: "data"
   top: "conv1"
 
   param {
@@ -115,21 +88,8 @@ layer {
 }
 
 layer {
-  name: "accuracy"
-  type: "Accuracy"
+  name: "prob"
+  type: "Softmax"
   bottom: "conv3"
-  bottom: "label"
-  top: "accuracy"
-  include {
-    phase: TEST
-  }
+  top: "prob"
 }
-
-layer {
-  name: "loss"
-  type: "SoftmaxWithLoss"
-  bottom: "conv3"
-  bottom: "label"
-  top: "loss"
-}
-
