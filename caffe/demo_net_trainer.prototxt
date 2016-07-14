@@ -1,0 +1,135 @@
+layer {
+  name: "training_cells"
+  type: "Python"
+  top: "image"
+  top: "label"
+
+  include {
+    phase: TRAIN
+  }
+
+  python_param {
+    module: "fisherman.caffe_layers"
+    layer: "DataMapLayer"
+    param_str: "{ 'tops': ['image', 'label'], 'data_dir': '/home/sam/code/fisherman/data/demo_data', 'split': 'training', 'samples_per_class': 256, 'kernel': 13 }"
+  }
+}
+
+layer {
+  name: "testing_cells"
+  type: "Python"
+  top: "image"
+  top: "label"
+
+  include {
+    phase: TEST
+  }
+
+  python_param {
+    module: "fisherman.caffe_layers"
+    layer: "DataMapLayer"
+    param_str: "{ 'tops': ['image', 'label'], 'data_dir': '/home/sam/code/fisherman/data/demo_data', 'split': 'testing', 'samples_per_class': 256, 'kernel': 13 }"
+  }
+}
+
+
+layer {
+  name: "conv1"
+  type: "Convolution"
+  bottom: "image"
+  top: "conv1"
+
+  param {
+    lr_mult: 1
+  }
+
+  param {
+    lr_mult: 2
+  }
+
+  convolution_param {
+    num_output: 20
+    kernel_size: 5
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "conv2"
+  type: "Convolution"
+  bottom: "conv1"
+  top: "conv2"
+
+  param {
+    lr_mult: 1
+  }
+
+  param {
+    lr_mult: 2
+  }
+
+  convolution_param {
+    num_output: 20
+    kernel_size: 5
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "conv3"
+  type: "Convolution"
+  bottom: "conv2"
+  top: "conv3"
+
+  param {
+    lr_mult: 1
+  }
+
+  param {
+    lr_mult: 2
+  }
+
+  convolution_param {
+    num_output: 20
+    kernel_size: 5
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "accuracy"
+  type: "Accuracy"
+  bottom: "conv3"
+  bottom: "label"
+  top: "accuracy"
+  include {
+    phase: TEST
+  }
+}
+
+layer {
+  name: "loss"
+  type: "SoftmaxWithLoss"
+  bottom: "conv3"
+  bottom: "label"
+  top: "loss"
+}
+
