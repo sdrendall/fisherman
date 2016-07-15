@@ -1,4 +1,0 @@
-Log file created at: 2016/07/07 14:23:58
-Running on machine: betty
-Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
-I0707 14:23:58.568776 10987 caffe.cpp:185] Using GPUs 0
