@@ -1,0 +1,264 @@
+name: "fish_net"
+
+layer {
+  name: "training_cells"
+  type: "Python"
+  top: "image"
+  top: "label"
+
+  include {
+    phase: TRAIN
+  }
+
+  python_param {
+    module: "fisherman.caffe_layers"
+    layer: "DataMapLayer"
+    param_str: "{\'tops\': [\'image\', \'label\'], \'data_dir\': \'/home/sam/code/fisherman/data/dense_labelling_k149/', \'split\': \'train\', 'samples_per_class': 256, 'kernel': 149}"
+  }
+}
+
+layer {
+  name: "testing_cells"
+  type: "Python"
+  top: "image"
+  top: "label"
+
+  include {
+    phase: TEST
+  }
+
+  python_param {
+    module: "fisherman.caffe_layers"
+    layer: "DataMapLayer"
+    param_str: "{\'tops\': [\'image\', \'label\'], \'data_dir\': \'/home/sam/code/fisherman/data/dense_labelling_k149/', \'split\': \'test\', 'samples_per_class': 256, 'kernel': 149}"
+  }
+}
+
+# Input is 161 x 161
+
+layer {
+  name: "conv1"
+  type: "Convolution"
+  bottom: "image"
+  top: "conv1"
+
+  param {
+    lr_mult: 1
+  }
+
+  param {
+    lr_mult: 2
+  }
+
+  convolution_param {
+    num_output: 16
+    kernel_size: 3
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+    name: "relu_c1"
+    type: "ReLU"
+    bottom: "conv1"
+    top: "conv1"
+}
+
+# Convs to 159 x 159
+
+layer { 
+    name: "pool1"
+    type: "Pooling" 
+    bottom: "conv1" 
+    top: "pool1" 
+    pooling_param {
+      pool: MAX
+      kernel_size: 3
+      stride: 3
+    }
+}
+
+# Pools to 53 x 53
+
+layer {
+  name: "conv2"
+  type: "Convolution"
+  bottom: "pool1"
+  top: "conv2"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 2
+  }
+  convolution_param {
+    num_output: 16
+    kernel_size: 3
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+    name: "relu_c2"
+    type: "ReLU"
+    bottom: "conv2"
+    top: "conv2"
+}
+
+# Convs to 51 x 51
+
+layer {
+  name: "pool2"
+  type: "Pooling"
+  bottom: "conv2"
+  top: "pool2"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 3
+  }
+}
+
+# Pools to 17 x 17
+
+layer {
+  name: "conv3"
+  type: "Convolution"
+  bottom: "pool2"
+  top: "conv3"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 2
+  }
+  convolution_param {
+    num_output: 8
+    kernel_size: 3
+    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+    name: "relu_c3"
+    type: "ReLU"
+    bottom: "conv3"
+    top: "conv3"
+}
+
+# Convs to 15 x 15
+
+layer {
+  name: "pool3"
+  type: "Pooling"
+  bottom: "conv3"
+  top: "pool3"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 3
+  }
+}
+
+# Pools to 5 x 5
+
+layer {
+  name: "ip1"
+  type: "InnerProduct"
+  bottom: "pool3"
+  top: "ip1"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 2
+  }
+  inner_product_param {
+    num_output: 32
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "relu_i1"
+  type: "ReLU"
+  bottom: "ip1"
+  top: "ip1"
+}
+
+layer{
+  name: "drop1"
+  type: "Dropout"
+  bottom: "ip1"
+  top: "ip1"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+  include {
+    phase: TRAIN
+  }
+}
+
+layer {
+  name: "ip2"
+  type: "InnerProduct"
+  bottom: "ip1"
+  top: "ip2"
+  param {
+    lr_mult: 1
+  }
+  param {
+    lr_mult: 2
+  }
+  inner_product_param {
+    num_output: 3
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
+  }
+}
+
+layer {
+  name: "accuracy"
+  type: "Accuracy"
+  bottom: "ip2"
+  bottom: "label"
+  top: "accuracy"
+  include {
+    phase: TEST
+  }
+}
+
+layer {
+  name: "loss"
+  type: "SoftmaxWithLoss"
+  bottom: "ip2"
+  bottom: "label"
+  top: "loss"
+}
