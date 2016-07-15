@@ -1,0 +1,4 @@
+Log file created at: 2016/07/12 10:12:39
+Running on machine: betty
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+F0712 10:12:39.788514 25050 io.cpp:36] Check failed: fd != -1 (-1 vs. -1) File not found: /home/sam/code/fisherman/caffe/fish_net/kern_149/fish_net_memory_map_trainer.prototxt
