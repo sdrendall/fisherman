@@ -37,10 +37,10 @@ def configure_argument_parser():
         help='Location to save output mask')
     parser.add_argument('-c', '--channels', type=int, nargs='+', default=None,
         help='Channels (zero based) to use as input to network. Defaults to all')
-    parser.add_argument('-s', '--scale', type=float, nargs='+', default=1.0,
+    parser.add_argument('-s', '--scale', type=float, nargs='+', default=[1.0],
         help='Scalar or array to scale the intensity values of the input image by. If multiple values are'
              'given, a different scale will be applied to each image channel.')
-    parser.add_argument('-f', '--offset', type=float, nargs='+', default=0.0,
+    parser.add_argument('-f', '--offset', type=float, nargs='+', default=[0.0],
         help='Scalar or array to offset the intensity values of the input image by. If multiple values are'
              'given, a different offset will be applied to each image channel.')
     parser.add_argument('-O', '--hdf5_output', type=path.expanduser, default=None,
@@ -71,11 +71,26 @@ def transpose_input_image(input_image):
         return input_image.transpose(2, 0, 1)
 
 def rescale_image(im, args):
-    for i in range(0, 2):
-        scale = (0.00325218, 0.00021881)
-        offset = (469.376, 4183.8239)
-        im[i, ...] -= offset[i]
-        im[i, ...] *= scale[i]
+    """
+    Rescale the image using the specified parameters
+    """
+    num_channels = im.shape[0]
+
+    if len(args.offset) == 1:
+        im -= args.offset[0]
+    elif len(args.offset) == num_channels:
+        for i in range(0, num_channels):
+            im[i, ...] -= offset[i]
+    else:
+        raise Exception("Number of offset parameters must equal 1 or the number of image channels. Offset length: {}".format(len(args.offset)))
+
+    if len(args.scale) == 1:
+        im -= args.scale[0]
+    elif len(args.scale) == num_channels:
+        for i in range(0, num_channels):
+            im[i, ...] *= scale[i]
+    else:
+        raise Exception("Number of scale parameters must equal 1 or the number of image channels. Scale length: {}".format(len(args.scale)))
 
     return im
 
