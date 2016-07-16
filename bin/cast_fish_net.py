@@ -14,8 +14,8 @@ from fisherman import data_io, math, detection
 from matplotlib.pyplot import figure, show, imshow
 from argparse import ArgumentParser
 
-MODEL_PATH = path.join(environ['FISHERMAN_ROOT'], 'fish_net_conv_deploy_weights.caffemodel')
-NET_PATH = path.join(environ['FISHERMAN_ROOT'], 'caffe/fish_net/kern_149/fish_net_conv_deploy.prototxt')
+MODEL_PATH = path.join(environ['FISHERMAN_ROOT'], 'models/kern_149_15/fish_net_conv_deploy_weights.caffemodel')
+NET_PATH = path.join(environ['FISHERMAN_ROOT'], 'caffe/kern_149_15/fish_net_conv_deploy.prototxt')
 
 print "MODEL_PATH: {}".format(MODEL_PATH)
 print "NET_PATH: {}".format(NET_PATH)
@@ -100,7 +100,10 @@ def compute_network_outputs(input_image, net, args):
             output[..., i::NET_PARAMS['stride'], j::NET_PARAMS['stride']] = \
                 net.forward_all(data=input_view[numpy.newaxis, ...])['prob']
 
-    return output[..., :-NET_PARAMS['stride'] + 1, :-NET_PARAMS['stride'] + 1]
+    if NET_PARAMS['stride'] == 1:
+        return output
+    else:
+        return output[..., :-NET_PARAMS['stride'] + 1, :-NET_PARAMS['stride'] + 1]
 
 
 def main():

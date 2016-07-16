@@ -222,8 +222,8 @@ class ImageChunkerWithOutput(ImageChunker):
         # row_range looks like [start_row, end_row]
         row_range = numpy.asarray((chunk_row, chunk_row + 1)) * self._output_chunk_size
         col_range = numpy.asarray((chunk_col, chunk_col + 1)) * self._output_chunk_size
-        row_range -= chunk_row
-        col_range -= chunk_col
+        #row_range -= chunk_row
+        #col_range -= chunk_col
         
         output_shape = self.get_output_shape()
         if row_range[1] > output_shape[1]:
