@@ -80,7 +80,7 @@ def rescale_image(im, args):
         im -= args.offset[0]
     elif len(args.offset) == num_channels:
         for i in range(0, num_channels):
-            im[i, ...] -= offset[i]
+            im[i, ...] -= args.offset[i]
     else:
         raise Exception("Number of offset parameters must equal 1 or the number of image channels. Offset length: {}".format(len(args.offset)))
 
@@ -88,7 +88,7 @@ def rescale_image(im, args):
         im -= args.scale[0]
     elif len(args.scale) == num_channels:
         for i in range(0, num_channels):
-            im[i, ...] *= scale[i]
+            im[i, ...] *= args.scale[i]
     else:
         raise Exception("Number of scale parameters must equal 1 or the number of image channels. Scale length: {}".format(len(args.scale)))
 
