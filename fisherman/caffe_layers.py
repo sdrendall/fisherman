@@ -359,8 +359,7 @@ class DataMapLayer(caffe.Layer):
         """
         Get the appropriate nomalization stats dict from the master stats dict for the given entry
         """
-        vsi_name = path.basename(entry['vsi_filename'])
-        return self.stats_dict[vsi_name]
+        return self.stats_dict[entry['vsi_filename']]
 
     def load_source_image(self, entry):
         """
