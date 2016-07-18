@@ -4,7 +4,6 @@ import lmdb
 import json
 import xml.etree.ElementTree as ET
 from os import path
-from matplotlib import pyplot as plt
 from skimage import io
 from exceptions import NameError, IndexError, TypeError
 from fisherman import math
@@ -59,15 +58,6 @@ class TrainingExample(object):
 
         return caffe.io.array_to_datum(self.image.transpose(2,0,1), label=self.label)
 
-
-    def display(self):
-        """
-        Displays the training example and its label.
-        """
-        plt.figure()
-        plt.imshow(self.image)
-        plt.title('%s' % 'Positive' if (self.label == 1) else 'Negative')
-        plt.show(block=False)
 
     def write(self, save_path):
         """
