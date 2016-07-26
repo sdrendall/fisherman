@@ -52,9 +52,12 @@ def configure_argument_parser():
         help='Compute network weights using a gpu. Defaults to cpu usage')
     parser.add_argument('-v', '--vsi', action='store_true', default=False,
         help='Specifies that the input image is in the vsi format')
-    parser.add_argument('-p', '--chunker_params', type=ast.literal_eval, default={'chunk_size': 300, 'window_size': NET_PARAMS['kernel'], 'stride': 1},
+    parser.add_argument('-p', '--chunker_params', type=ast.literal_eval, default={'chunk_size': 648, 'window_size': NET_PARAMS['kernel'], 'stride': 1},
         help='Use an image chunker to compute the input and output. Chunker params should be specified as a string'
              'Default: {"chunk_size": 300, "stride": 1, "window_size": %d, "num_classes": 2}' % NET_PARAMS['kernel'])
+    parser.add_argument('-z', '--step_size', type=int, default=1,
+        help='The sampling step_size to use when computing the output. ex. step_size=1 computes a fully dense
+                output. step_size=2 computes an output for every other pixel')
 
     return parser
 
@@ -106,8 +109,8 @@ def compute_network_outputs(input_image, net, args):
     output = numpy.zeros((NET_PARAMS['num_classes'], output_resolution[0], output_resolution[1]))
 
     # Compute network outputs
-    for i in range(0, NET_PARAMS['stride']):
-        for j in range(0, NET_PARAMS['stride']):
+    for i in range(0, NET_PARAMS['stride'], args.step_size):
+        for j in range(0, NET_PARAMS['stride'], args.step_size):
             #progress = 100.0 * (i*NET_PARAMS['stride'] + j)/NET_PARAMS['stride']**2
             #debug_out("{0:.2f}% progress".format(progress), args)
             input_view = input_image[numpy.newaxis, ..., i:, j:]
