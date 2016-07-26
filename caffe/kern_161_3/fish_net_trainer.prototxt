@@ -13,7 +13,7 @@ layer {
   python_param {
     module: "fisherman.caffe_layers"
     layer: "DataMapLayer"
-    param_str: "{\'tops\': [\'image\', \'label\'], \'data_dir\': \'/home/sam/code/fisherman/data/dense_labelling_k149/', \'split\': \'train\', 'samples_per_class': 256, 'kernel': 149}"
+    param_str: "{\'tops\': [\'image\', \'label\'], \'data_dir\': \'/home/sam/code/fisherman/data/dense_labelling_k161/', \'split\': \'train\', 'samples_per_class': 256, 'kernel': 161, 'stats_path': '/home/sam/code/fisherman/vsi_stats.json', 'normalization': 'median'}"
   }
 }
 
@@ -30,7 +30,7 @@ layer {
   python_param {
     module: "fisherman.caffe_layers"
     layer: "DataMapLayer"
-    param_str: "{\'tops\': [\'image\', \'label\'], \'data_dir\': \'/home/sam/code/fisherman/data/dense_labelling_k149/', \'split\': \'test\', 'samples_per_class': 256, 'kernel': 149}"
+    param_str: "{\'tops\': [\'image\', \'label\'], \'data_dir\': \'/home/sam/code/fisherman/data/dense_labelling_k161/', \'split\': \'test\', 'samples_per_class': 256, 'kernel': 161, 'stats_path': '/home/sam/code/fisherman/vsi_stats.json', 'normalization': 'median'}"
   }
 }
 

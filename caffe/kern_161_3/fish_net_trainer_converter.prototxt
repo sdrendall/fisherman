@@ -154,7 +154,7 @@ layer {
 
 layer {
   name: "ip1"
-  type: "Convolution"
+  type: "InnerProduct"
   bottom: "pool3"
   top: "ip1"
   param {
@@ -163,10 +163,14 @@ layer {
   param {
     lr_mult: 2
   }
-  convolution_param {
+  inner_product_param {
     num_output: 32
-    kernel_size: 5
-    stride: 1
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
   }
 }
 
@@ -192,7 +196,7 @@ layer{
 
 layer {
   name: "ip2"
-  type: "Convolution"
+  type: "InnerProduct"
   bottom: "ip1"
   top: "ip2"
   param {
@@ -201,10 +205,14 @@ layer {
   param {
     lr_mult: 2
   }
-  convolution_param {
-    kernel_size: 1
-    stride: 1
+  inner_product_param {
     num_output: 2
+    weight_filler {
+      type: "xavier"
+    }
+    bias_filler {
+      type: "constant"
+    }
   }
 }
 
