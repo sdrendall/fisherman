@@ -69,6 +69,11 @@ def get_corner_peaks_by_label(image, labels, **kwargs):
     """
     Wrapper for skimage.feature.corner_peaks that optimizes the labels feature
 
+    INPUTS
+    ------
+    image: Image to find local maxima in
+    labels: binary mask denoting regions to search for local maxima in
+
     indices feature is not supported
     """
     peaks = numpy.zeros_like(image, dtype=numpy.bool)

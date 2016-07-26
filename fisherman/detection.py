@@ -1,6 +1,7 @@
 import caffe
 import numpy
 import skimage
+import pandas
 from skimage.morphology import disk
 from skimage import feature, filters, measure, morphology, io
 import itertools as it
@@ -8,6 +9,33 @@ from fisherman import error_handling, math
 from scipy.misc import imresize
 from scipy.ndimage.morphology import binary_fill_holes
 from scipy.ndimage import gaussian_laplace
+
+
+def get_cell_dataframe_from_label_image(label_image, intensity_image):
+    """
+    TODO
+    """
+    # Compute some regionprops
+    props = measure.regionprops(label_image, intensity_image)
+    centroids = [p.centroid for p in props]
+    means = [p.mean_intensity for p in props]
+    number_of_pixels = [p.filled_area for p in props]
+
+    # Compute percentiles
+    intensity_pixels = [p.intensity_image[p.filled_image] for p in props]
+    percentiles = {
+        '{}th percentile'.format(per): [numpy.percentile(ips, per) for ips in intensity_pixels]
+        for per in range(0, 105, 5)
+    }
+
+    row_dict = {
+        'centroid': centroids,
+        'mean': means,
+        'number_of_pixels': image_sizes
+    }
+    row_dict.update(percentiles)
+    return pandas.DataFrame(row_dict)
+
 
 
 class ImageChunker(object):
@@ -351,7 +379,6 @@ class ImageChunkerWithOutput(ImageChunker):
             print "window_size: {}".format(self._window_size)
             raise TypeError(msg)
 
-
     def _assert_allocated_output(self):
         """
         Asserts that the output has been allocated
@@ -360,6 +387,115 @@ class ImageChunkerWithOutput(ImageChunker):
             raise error_handling.OutputUnallocatedException
 
 
+class ImageSlice(object):
+    """
+    A Slice of an image
+
+    Contains image data, and the bounding box of the data in the parent image
+    """
+
+    def __init__(self, image, bounding_box=None):
+        self.set_image(image)
+
+        if bounding_box is None:
+            bounding_box = [0, 0] + list(image.shape[:2])
+
+        self.set_bounding_box(bounding_box)
+
+    def display(self, block=False):
+        """
+        Displays the image of this cell
+        """
+        display(self.image)
+
+    def set_image(self, image):
+        """
+        Sets the image depicting the cell
+        """
+        self._image = image
+
+    def get_image(self):
+        """
+        Returns the image depicting this cell
+        """
+        return self._image
+
+    def set_bounding_box(self, bbox):
+        """
+        Specifies the bounding box of self.image in the containing image in the following format:
+
+        [top_left_row, top_left_col, bottom_right_row, bottom_right_col]
+
+        Index is stored internally as a float32 and non-integer values are rounded
+        """
+        self._bbox = numpy.asarray(bbox, dtype=numpy.float32).round()
+
+    def get_bounding_box(self):
+        """
+        Returns the bounding box as a tuple
+        """
+        return tuple(self._bbox)
+
+    # Properties 
+    image = property(get_image, set_image)
+    bbox = property(get_bounding_box, set_bounding_box)
+
+
+class Cell(ImageSlice):
+    """
+    The image of a cell in a larger (parent) image.
+
+    Contains the image of the cell, and the bounding box of the cell's image
+     in the parent image
+    """
+
+    def __init__(self, image, mask, centroid, bounding_box=None, **kwargs):
+        ImageSlice.__init__(self, image, bounding_box=bounding_box, **kwargs)
+        self.set_mask(mask)
+        self.set_centroid(centroid)
+    
+    def set_mask(self, mask):
+        """
+        Casts the given mask to a bool and sets it as self.mask
+        """
+        self._mask = mask.astype(numpy.bool)
+
+    def get_mask(self):
+        """
+        Returns a boolean mask specifying the pixels in self.image that correspond to this cell
+        """
+        return self._mask
+
+    def set_centroid(self, centroid):
+        """
+        Sets the given centroid as a numpy.float32
+
+        This should be in the format (row, col)
+        """
+        self._centroid = numpy.asarray(centroid, dtype=numpy.float32)
+
+    def get_centroid(self):
+        """
+        Returns the coordinates to the cell's centroid within self._image
+         as a tuple of floats
+
+        This is NOT necessarily the center pixel in the image
+        """
+        return tuple(self._centroid)
+
+    # Properties
+    mask = property(get_mask, set_mask)
+    centroid = property(get_centroid, set_centroid)
+
+
+def display(image, block=False):
+    import matplotlib.pyplot as plt
+    plt.figure()
+    plt.imshow(image)
+    plt.show(block=block)
+
+
+## DEPRECATED ##
 class CellDetector(object):
     """
     Detects an arbitrary number of cells in an image
@@ -393,6 +529,8 @@ class CellDetector(object):
         self.set_cell_radius(cell_radius)
         self.set_signal_channel(signal_channel)
         self.set_compute_mask_on_signal_plane_only(signal_plane_only)
+
+        print "WARNING: The cell detector class is deprected and will be removed shortly"
 
     def set_image(self, image):
         """
@@ -639,109 +777,3 @@ class CellDetector(object):
         return self._mean_image
 
 
-class ImageSlice(object):
-    """
-    A Slice of an image
-
-    Contains image data, and the bounding box of the data in the parent image
-    """
-
-    def __init__(self, image, bounding_box=None):
-        self.set_image(image)
-
-        if bounding_box is None:
-            bounding_box = [0, 0] + list(image.shape[:2])
-
-        self.set_bounding_box(bounding_box)
-
-    def display(self, block=False):
-        """
-        Displays the image of this cell
-        """
-        display(self.image)
-
-    def set_image(self, image):
-        """
-        Sets the image depicting the cell
-        """
-        self._image = image
-
-    def get_image(self):
-        """
-        Returns the image depicting this cell
-        """
-        return self._image
-
-    def set_bounding_box(self, bbox):
-        """
-        Specifies the bounding box of self.image in the containing image in the following format:
-
-        [top_left_row, top_left_col, bottom_right_row, bottom_right_col]
-
-        Index is stored internally as a float32 and non-integer values are rounded
-        """
-        self._bbox = numpy.asarray(bbox, dtype=numpy.float32).round()
-
-    def get_bounding_box(self):
-        """
-        Returns the bounding box as a tuple
-        """
-        return tuple(self._bbox)
-
-    # Properties 
-    image = property(get_image, set_image)
-    bbox = property(get_bounding_box, set_bounding_box)
-
-
-class Cell(ImageSlice):
-    """
-    The image of a cell in a larger (parent) image.
-
-    Contains the image of the cell, and the bounding box of the cell's image
-     in the parent image
-    """
-
-    def __init__(self, image, mask, centroid, bounding_box=None, **kwargs):
-        ImageSlice.__init__(self, image, bounding_box=bounding_box, **kwargs)
-        self.set_mask(mask)
-        self.set_centroid(centroid)
-    
-    def set_mask(self, mask):
-        """
-        Casts the given mask to a bool and sets it as self.mask
-        """
-        self._mask = mask.astype(numpy.bool)
-
-    def get_mask(self):
-        """
-        Returns a boolean mask specifying the pixels in self.image that correspond to this cell
-        """
-        return self._mask
-
-    def set_centroid(self, centroid):
-        """
-        Sets the given centroid as a numpy.float32
-
-        This should be in the format (row, col)
-        """
-        self._centroid = numpy.asarray(centroid, dtype=numpy.float32)
-
-    def get_centroid(self):
-        """
-        Returns the coordinates to the cell's centroid within self._image
-         as a tuple of floats
-
-        This is NOT necessarily the center pixel in the image
-        """
-        return tuple(self._centroid)
-
-    # Properties
-    mask = property(get_mask, set_mask)
-    centroid = property(get_centroid, set_centroid)
-
-
-def display(image, block=False):
-    import matplotlib.pyplot as plt
-    plt.figure()
-    plt.imshow(image)
-    plt.show(block=block)
