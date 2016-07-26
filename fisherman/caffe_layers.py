@@ -343,12 +343,12 @@ class DataMapLayer(caffe.Layer):
             return rescale_image(image)
 
         elif self.normalization == 'mean':
-            norm_stats = get_normalization_stats(entry)
+            norm_stats = self.get_normalization_stats(entry)
             offset = [c['mean'] for c in norm_stats['channel_stats']]
             return rescale_image(image, offset=offset)
 
         elif self.normalization == 'median':
-            norm_stats = get_normalization_stats(entry)
+            norm_stats = self.get_normalization_stats(entry)
             offset = [c['median'] for c in norm_stats['channel_stats']]
             return rescale_image(image, offset=offset)
 
@@ -359,7 +359,7 @@ class DataMapLayer(caffe.Layer):
         """
         Get the appropriate nomalization stats dict from the master stats dict for the given entry
         """
-        return self.stats_dict[entry['vsi_filename']]
+        return self.stats_dict[entry['vsi_path']]
 
     def load_source_image(self, entry):
         """
