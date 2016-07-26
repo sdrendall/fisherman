@@ -14,11 +14,11 @@ from fisherman import data_io, math, detection
 from matplotlib.pyplot import figure, show, imshow
 from argparse import ArgumentParser
 
-MODEL_PATH = path.join(environ['FISHERMAN_ROOT'], 'models/kern_149_15/fish_net_conv_deploy_weights.caffemodel')
-NET_PATH = path.join(environ['FISHERMAN_ROOT'], 'caffe/kern_149_15/fish_net_conv_deploy.prototxt')
+DEFAULT_MODEL_PATH = path.join(environ['FISHERMAN_ROOT'], 'models/kern_149_15/fish_net_conv_deploy_weights.caffemodel')
+DEFAULT_NET_PATH = path.join(environ['FISHERMAN_ROOT'], 'caffe/kern_149_15/fish_net_conv_deploy.prototxt')
 
-print "MODEL_PATH: {}".format(MODEL_PATH)
-print "NET_PATH: {}".format(NET_PATH)
+print "DEFAULT_MODEL_PATH: {}".format(MODEL_PATH)
+print "DEFAULT_NET_PATH: {}".format(NET_PATH)
 
 NET_PARAMS = {
     'kernel': 149,
@@ -58,6 +58,10 @@ def configure_argument_parser():
     parser.add_argument('-z', '--step_size', type=int, default=1,
         help='The sampling step_size to use when computing the output. ex. step_size=1 computes a fully dense
                 output. step_size=2 computes an output for every other pixel')
+    parser.add_argument('-N', '--net_path', type=path.expanduser, default=DEFAULT_NET_PATH,
+        help='Path to the net architecture prototxt file to use. Default: {}'.format(DEFAULT_NET_PATH))
+    parser.add_argument('-M', '--model_path', type=path.expanduser, default=DEFAULT_MODEL_PATH,
+        help='Path to the net architecture prototxt file to use. Default: {}'.format(DEFAULT_MODEL_PATH))
 
     return parser
 
@@ -140,7 +144,7 @@ def main():
     input_image = rescale_image(input_image, args)
 
     # Configure Caffe
-    net = caffe.Net(NET_PATH, MODEL_PATH, caffe.TEST)
+    net = caffe.Net(args.net_path, args.model_path, caffe.TEST)
 
     if args.gpu:
         caffe.set_mode_gpu()
