@@ -17,12 +17,9 @@ from argparse import ArgumentParser
 DEFAULT_MODEL_PATH = path.join(environ['FISHERMAN_ROOT'], 'models/kern_149_15/fish_net_conv_deploy_weights.caffemodel')
 DEFAULT_NET_PATH = path.join(environ['FISHERMAN_ROOT'], 'caffe/kern_149_15/fish_net_conv_deploy.prototxt')
 
-print "DEFAULT_MODEL_PATH: {}".format(MODEL_PATH)
-print "DEFAULT_NET_PATH: {}".format(NET_PATH)
-
 NET_PARAMS = {
-    'kernel': 149,
-    'stride': 15,
+    'kernel': 161,
+    'stride': 27,
     'num_classes': 2
 }
 
@@ -52,12 +49,11 @@ def configure_argument_parser():
         help='Compute network weights using a gpu. Defaults to cpu usage')
     parser.add_argument('-v', '--vsi', action='store_true', default=False,
         help='Specifies that the input image is in the vsi format')
-    parser.add_argument('-p', '--chunker_params', type=ast.literal_eval, default={'chunk_size': 648, 'window_size': NET_PARAMS['kernel'], 'stride': 1},
-        help='Use an image chunker to compute the input and output. Chunker params should be specified as a string'
-             'Default: {"chunk_size": 300, "stride": 1, "window_size": %d, "num_classes": 2}' % NET_PARAMS['kernel'])
+    parser.add_argument('-k', '--chunk_size', type=int, default=1000,
+        help='Specifies the chunk size to use when processing images. Default = 1000')
     parser.add_argument('-z', '--step_size', type=int, default=1,
-        help='The sampling step_size to use when computing the output. ex. step_size=1 computes a fully dense
-                output. step_size=2 computes an output for every other pixel')
+        help='The sampling step_size to use when computing the output. ex. step_size=1 computes a fully dense'
+                'output. step_size=2 computes an output for every other pixel')
     parser.add_argument('-N', '--net_path', type=path.expanduser, default=DEFAULT_NET_PATH,
         help='Path to the net architecture prototxt file to use. Default: {}'.format(DEFAULT_NET_PATH))
     parser.add_argument('-M', '--model_path', type=path.expanduser, default=DEFAULT_MODEL_PATH,
@@ -133,6 +129,25 @@ def main():
     parser = configure_argument_parser()
     args = parser.parse_args()
 
+    # Configure Caffe
+    if args.gpu:
+        caffe.set_mode_gpu()
+    else:
+        caffe.set_mode_cpu()
+
+    net = caffe.Net(args.net_path, args.model_path, caffe.TEST)
+
+
+    print "Model Path: {}".format(args.model_path)
+    print "Net Path: {}".format(args.net_path)
+
+    chunker_params = {
+        'chunk_size': args.chunk_size,
+        'window_size': NET_PARAMS['kernel'], # TODO Pull this from the network
+        'stride': args.step_size,
+        'num_classes': 2
+    }
+
     # Load input image
     if args.vsi:
         source_image = data_io.load_vsi(args.image_path)
@@ -143,16 +158,9 @@ def main():
     input_image = transpose_input_image(input_image)
     input_image = rescale_image(input_image, args)
 
-    # Configure Caffe
-    net = caffe.Net(args.net_path, args.model_path, caffe.TEST)
+    print "Chunker Params: "
+    print chunker_params
 
-    if args.gpu:
-        caffe.set_mode_gpu()
-    else:
-        caffe.set_mode_cpu()
-
-    chunker_params = NET_PARAMS.copy()
-    chunker_params.update(args.chunker_params)
     chunker = detection.ImageChunkerWithOutput(input_image, **chunker_params)
     output = chunker.allocate_output()
 
